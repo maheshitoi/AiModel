@@ -1,0 +1,6 @@
+# Model training / evaluation. On Windows and macOS the PyPI torch wheel is CPU-only;
+# on Linux with an NVIDIA GPU the PyPI wheel includes CUDA.
+torch>=2.5,<3
+numpy>=2.0,<3
+pandas>=2.2,<3
+pytest>=8,<9

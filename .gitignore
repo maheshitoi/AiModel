@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Build output
+dist/
+.next/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# AI artifacts (large, reproducible from config + data)
+ai-model/checkpoints/*
+!ai-model/checkpoints/.gitkeep
+ai-model/dataset/raw/*
+ai-model/dataset/processed/*
+!ai-model/dataset/**/.gitkeep
+
+# Uploaded datasets
+uploads/
+
+# Tooling
+.pytest_cache/
+coverage/
+*.log
+.DS_Store

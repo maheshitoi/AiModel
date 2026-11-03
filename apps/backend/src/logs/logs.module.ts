@@ -1,0 +1,12 @@
+import { Global, Module } from '@nestjs/common';
+import { AuditService } from './audit.service';
+import { LogsController } from './logs.controller';
+import { SystemLogService } from './system-log.service';
+
+@Global()
+@Module({
+  controllers: [LogsController],
+  providers: [SystemLogService, AuditService],
+  exports: [SystemLogService, AuditService],
+})
+export class LogsModule {}

@@ -1,0 +1,32 @@
+{
+  "name": "small-cpu",
+  "description": "Overnight CPU run once tiny-cpu works end to end (~6.8M parameters, roughly 6-8h for 5000 steps on this laptop).",
+  "seed": 1337,
+  "tokenizer": {
+    "type": "byte-level-bpe",
+    "vocab_size": 8192
+  },
+  "model": {
+    "context_length": 256,
+    "n_embd": 256,
+    "n_head": 8,
+    "n_layer": 6,
+    "dropout": 0.1,
+    "tie_embeddings": true
+  },
+  "training": {
+    "batch_size": 16,
+    "learning_rate": 0.0006,
+    "min_learning_rate": 0.00006,
+    "warmup_steps": 300,
+    "max_steps": 5000,
+    "weight_decay": 0.1,
+    "grad_clip": 1.0,
+    "eval_interval": 250,
+    "eval_batches": 20,
+    "checkpoint_interval": 500,
+    "validation_split": 0.1,
+    "device": "auto",
+    "num_threads": 4
+  }
+}

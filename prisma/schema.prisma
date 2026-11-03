@@ -1,0 +1,483 @@
+// Prisma schema for the My Own AI platform.
+//
+// Conventions
+// - IDs are time-ordered UUIDv7: globally unique and index-friendly for cursor pagination.
+// - Every table has createdAt; mutable tables also have updatedAt.
+// - Secrets (WhatsApp tokens) are stored encrypted by the application, never in plain text.
+// - Log tables keep related IDs as plain strings (no FK) so logs survive deletions.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Auth ─────────────────────────────
+
+model Role {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  name        String   @unique // ADMIN, OPERATOR, VIEWER
+  description String?
+  permissions String[] // e.g. "conversations:reply", "training:manage"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+}
+
+model User {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  email            String    @unique // stored lower-cased by the application
+  name             String
+  passwordHash     String
+  isActive         Boolean   @default(true)
+  roleId           String    @db.Uuid
+  lastLoginAt      DateTime?
+  // Brute-force protection: locked after too many consecutive failures (see "security" setting).
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  role                  Role              @relation(fields: [roleId], references: [id])
+  sessions              Session[]
+  assignedConversations Conversation[]
+  sentMessages          Message[]
+  uploadedDatasets      TrainingDataset[] @relation("DatasetUploadedBy")
+  approvedDatasets      TrainingDataset[] @relation("DatasetApprovedBy")
+  trainingJobs          TrainingJob[]
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  updatedSettings       SystemSetting[]
+
+  @@index([roleId])
+}
+
+// One row per login. Doubles as login history; the refresh token itself is never stored.
+model Session {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  userId           String    @db.Uuid
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+}
+
+// ─────────────────────────── WhatsApp ───────────────────────────
+
+enum WhatsAppAccountStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISABLED
+}
+
+model WhatsAppAccount {
+  id                   String                @id @default(uuid(7)) @db.Uuid
+  displayName          String
+  phoneNumber          String // E.164 display number
+  phoneNumberId        String                @unique // Graph API phone number ID
+  businessAccountId    String // WABA ID
+  accessTokenEncrypted String // AES-256-GCM ciphertext, never returned by the API
+  accessTokenLast4     String // for masked display only
+  appSecretEncrypted   String // used to verify X-Hub-Signature-256
+  verifyTokenEncrypted String // webhook GET verification token
+  status               WhatsAppAccountStatus @default(PENDING)
+  autoReplyEnabled     Boolean               @default(false)
+  lastVerifiedAt       DateTime?
+  lastWebhookAt        DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  conversations Conversation[]
+}
+
+enum ConversationStatus {
+  OPEN
+  HUMAN // human takeover: AI will not reply
+  CLOSED
+}
+
+model Conversation {
+  id                 String             @id @default(uuid(7)) @db.Uuid
+  whatsAppAccountId  String             @db.Uuid
+  customerWaId       String // WhatsApp ID (phone number) of the customer
+  customerName       String?
+  status             ConversationStatus @default(OPEN)
+  aiEnabled          Boolean            @default(true)
+  assignedToId       String?            @db.Uuid
+  unreadCount        Int                @default(0)
+  // Denormalised for the inbox list; updated in the same transaction as each new message.
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  // Start of the 24h customer-service window for free-form replies.
+  lastInboundAt      DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  whatsAppAccount WhatsAppAccount @relation(fields: [whatsAppAccountId], references: [id], onDelete: Cascade)
+  assignedTo      User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages        Message[]
+  aiUsage         AIUsage[]
+
+  @@unique([whatsAppAccountId, customerWaId])
+  @@index([whatsAppAccountId, lastMessageAt(sort: Desc)])
+  @@index([status, lastMessageAt(sort: Desc)])
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  AUDIO
+  VIDEO
+  STICKER
+  LOCATION
+  CONTACTS
+  INTERACTIVE
+  REACTION
+  TEMPLATE
+  UNSUPPORTED
+}
+
+enum MessageSource {
+  CUSTOMER
+  AI
+  HUMAN
+  SYSTEM
+}
+
+enum MessageStatus {
+  RECEIVED // inbound
+  QUEUED // outbound, waiting to be sent
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model Message {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  conversationId String           @db.Uuid
+  direction      MessageDirection
+  type           MessageType      @default(TEXT)
+  source         MessageSource
+  body           String?
+  // Media fields are reserved for images/documents/audio (later phases).
+  mediaId        String?
+  mediaMimeType  String?
+  mediaCaption   String?
+  // Graph API wamid. Unique => a redelivered webhook cannot create a second row.
+  waMessageId    String?          @unique
+  status         MessageStatus
+  // For AI replies: the inbound message being answered. Unique => at most one AI reply per message.
+  aiReplyToId    String?          @unique @db.Uuid
+  sentById       String?          @db.Uuid // human sender for manual replies
+  errorCode      String?
+  errorMessage   String?
+  retryCount     Int              @default(0)
+  // When WhatsApp says the event happened (inbound) or when we sent it (outbound).
+  occurredAt     DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  conversation  Conversation           @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  aiReplyTo     Message?               @relation("AiReply", fields: [aiReplyToId], references: [id], onDelete: SetNull)
+  aiReply       Message?               @relation("AiReply")
+  sentBy        User?                  @relation(fields: [sentById], references: [id], onDelete: SetNull)
+  statusHistory MessageStatusHistory[]
+  aiUsage       AIUsage?
+
+  @@index([conversationId, occurredAt(sort: Desc)])
+  @@index([occurredAt(sort: Desc)])
+  @@index([status, occurredAt(sort: Desc)])
+  @@index([direction, source, occurredAt(sort: Desc)])
+}
+
+model MessageStatusHistory {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  messageId    String        @db.Uuid
+  status       MessageStatus
+  errorCode    String?
+  errorMessage String?
+  occurredAt   DateTime
+  createdAt    DateTime      @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // Duplicate status webhooks are ignored at the database level.
+  @@unique([messageId, status])
+}
+
+// ────────────────────────── AI models ───────────────────────────
+
+model AIModel {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  name         String   @unique
+  description  String?
+  architecture String   @default("gpt-decoder")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  versions     ModelVersion[]
+  trainingJobs TrainingJob[]
+}
+
+enum ModelVersionStatus {
+  TRAINING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+model ModelVersion {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  modelId        String             @db.Uuid
+  version        Int
+  status         ModelVersionStatus @default(TRAINING)
+  // At most one active version platform-wide: enforced by the partial unique index
+  // "ModelVersion_single_active" added by hand in the init migration (Prisma can't express it).
+  isActive       Boolean            @default(false)
+  config         Json // full hyperparameter config used to train this version
+  parameterCount Int
+  vocabSize      Int
+  contextLength  Int
+  checkpointPath String?
+  tokenizerPath  String?
+  evalMetrics    Json?
+  trainedAt      DateTime?
+  activatedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  model       AIModel      @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  trainingJob TrainingJob?
+  aiUsage     AIUsage[]
+
+  @@unique([modelId, version])
+}
+
+// ─────────────────────────── Training ───────────────────────────
+
+enum DatasetFormat {
+  JSON
+  JSONL
+  TXT
+}
+
+enum DatasetStatus {
+  UPLOADED
+  VALIDATING
+  VALID
+  INVALID
+  APPROVED // reviewed by a human; required before it can be used for training
+  ARCHIVED
+}
+
+model TrainingDataset {
+  id                   String        @id @default(uuid(7)) @db.Uuid
+  name                 String
+  version              Int
+  description          String?
+  fileName             String
+  storagePath          String
+  format               DatasetFormat
+  sizeBytes            Int
+  checksumSha256       String
+  recordCount          Int           @default(0)
+  duplicateCount       Int           @default(0)
+  validationSplit      Float         @default(0.1)
+  validationErrors     Json?
+  status               DatasetStatus @default(UPLOADED)
+  isActive             Boolean       @default(false)
+  // Datasets derived from real customer messages must be flagged and explicitly approved.
+  containsCustomerData Boolean       @default(false)
+  uploadedById         String?       @db.Uuid
+  approvedById         String?       @db.Uuid
+  approvedAt           DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  uploadedBy   User?         @relation("DatasetUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  approvedBy   User?         @relation("DatasetApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  trainingJobs TrainingJob[]
+
+  @@unique([name, version])
+  @@index([checksumSha256])
+  @@index([status, isActive])
+}
+
+enum TrainingJobStatus {
+  QUEUED
+  RUNNING
+  STOPPING
+  STOPPED
+  COMPLETED
+  FAILED
+}
+
+model TrainingJob {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  modelId        String            @db.Uuid
+  // The version this job produces; set when the job starts.
+  modelVersionId String?           @unique @db.Uuid
+  status         TrainingJobStatus @default(QUEUED)
+  config         Json
+  currentStep    Int               @default(0)
+  totalSteps     Int
+  currentEpoch   Float             @default(0)
+  bestValLoss    Float?
+  errorMessage   String?
+  startedById    String?           @db.Uuid
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  model        AIModel           @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  modelVersion ModelVersion?     @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
+  startedBy    User?             @relation(fields: [startedById], references: [id], onDelete: SetNull)
+  datasets     TrainingDataset[]
+  metrics      TrainingMetric[]
+
+  @@index([status])
+  @@index([modelId, createdAt(sort: Desc)])
+}
+
+model TrainingMetric {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  jobId        String   @db.Uuid
+  step         Int
+  epoch        Float
+  trainLoss    Float
+  valLoss      Float?
+  learningRate Float
+  tokensPerSec Float?
+  cpuPercent   Float?
+  memoryMb     Float?
+  gpuPercent   Float?
+  createdAt    DateTime @default(now())
+
+  job TrainingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, step])
+}
+
+// ───────────────────────── Usage & logs ─────────────────────────
+
+// One row per inference request. Token counts are model tokens, not WhatsApp messages.
+model AIUsage {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  conversationId String?  @db.Uuid
+  messageId      String?  @unique @db.Uuid // the outbound reply produced, if any
+  modelVersionId String?  @db.Uuid
+  inputTokens    Int
+  outputTokens   Int
+  latencyMs      Int
+  success        Boolean
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  message      Message?      @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  modelVersion ModelVersion? @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([modelVersionId, createdAt])
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
+enum LogCategory {
+  BACKEND
+  WEBHOOK
+  AI
+  WHATSAPP
+  DATABASE
+  TRAINING
+  SECURITY
+}
+
+model SystemLog {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  level          LogLevel
+  category       LogCategory
+  event          String // machine-readable, e.g. "webhook.signature_invalid"
+  message        String
+  context        Json? // sanitised: never tokens, passwords or full message bodies
+  conversationId String?
+  messageId      String?
+  createdAt      DateTime    @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([level, createdAt(sort: Desc)])
+  @@index([category, createdAt(sort: Desc)])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String // e.g. "model.activate", "settings.update"
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+}
+
+model Notification {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String?   @db.Uuid // null = broadcast to all users
+  type      String // e.g. "training.completed", "whatsapp.delivery_failed"
+  severity  LogLevel  @default(INFO)
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt(sort: Desc)])
+}
+
+// Key/value settings validated by the backend (e.g. "ai.generation", "notifications").
+model SystemSetting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+}

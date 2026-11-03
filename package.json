@@ -1,0 +1,27 @@
+{
+  "name": "my-own-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-trained GPT-style language model + WhatsApp Cloud API automation + management dashboard",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:frontend": "npm run dev -w apps/frontend",
+    "dev:backend": "npm run start:dev -w apps/backend",
+    "dev:ai": "cd apps/ai-service && ..\\..\\.venv\\Scripts\\python.exe -m uvicorn main:app --reload --port 8000",
+    "build": "npm run build -w apps/backend && npm run build -w apps/frontend",
+    "lint": "npm run lint -w apps/frontend",
+    "test": "npm test -w apps/backend && npm run test:db -w apps/backend && npm run test:ai",
+    "test:ai": "cd apps/ai-service && ..\\..\\.venv\\Scripts\\python.exe -m pytest -q",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "prisma:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema prisma/schema.prisma",
+    "db:seed": "npm run db:seed -w apps/backend"
+  }
+}
