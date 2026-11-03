@@ -59,6 +59,12 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
 - [x] `dataset.build` CLI → train/val JSONL, tokenizer.json, uint16 .bin files, stats.json; deterministic (verified)
 - [x] 34 pytest tests passing; documented in [dataset-and-tokenizer.md](dataset-and-tokenizer.md) (2026-11-03)
 ## Phase 7 – Transformer implementation
+- [x] Token + positional embeddings, hand-written LayerNorm, causal multi-head attention (manual + fused,
+      verified equal), GELU feed-forward, pre-LN blocks, tied LM head, GPT-2 initialisation
+- [x] Cross-entropy loss with ignore index; generation with temperature / top-k / top-p / stop tokens
+- [x] 17 model tests (51 total in ai-model) passing
+- [x] Benchmark on this CPU: tiny-cpu 954k params, 658 ms/step (~55 min / 5k steps); small-cpu 5.1M, 5.6 s/step
+- [x] Documented in [model-architecture.md](model-architecture.md) (2026-11-03)
 ## Phase 8 – Training from scratch + evaluation
 ## Phase 9 – FastAPI inference service
 ## Phase 10 – NestJS ↔ AI service integration

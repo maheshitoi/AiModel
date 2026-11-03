@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 6 complete (dataset & tokenizer)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **Phase 7 complete (Transformer model)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## Architecture
 

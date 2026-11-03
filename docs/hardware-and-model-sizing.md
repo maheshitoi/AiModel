@@ -31,8 +31,24 @@ around 25–40 GFLOP/s on small matrices. So:
 | 25M+ params | — | — | — | days; use a cloud GPU instead |
 
 Measured on 2026-11-03: PyTorch 2.15 (CPU, 4 threads) reaches **~65 GFLOP/s** on a 2048×128·128×512
-matmul. Full training steps typically reach 40–50% of raw matmul throughput, which is consistent
-with the table above. Phase 7 will benchmark real step times and replace these estimates.
+matmul.
+
+### Measured training speed (Phase 7, `python -m model.benchmark`)
+
+Full steps (forward + backward + AdamW + grad clipping) on the real tokenized data. The vocabulary
+is 1,129 (what the synthetic data supports), not the configured 4,096/8,192, so parameter counts
+are lower than the estimates above.
+
+| Config | Params | Step time | Throughput | 5,000 steps | Epochs over current data |
+|---|---|---|---|---|---|
+| `tiny-cpu` | 954k | **658 ms** | 3,115 tok/s | **~55 min** | ~22 |
+| `tiny-cpu`, manual attention | 954k | 796 ms | 2,572 tok/s | ~66 min | ~22 |
+| `small-cpu` | 5.1M | **5.6 s** | 730 tok/s | **~7.8 h** | ~44 |
+
+Both are within the original estimates. The binding constraint is now **data, not compute**:
+5,000 steps already cycles through the synthetic dataset 22 times on `tiny-cpu`. Phase 8 therefore
+trains `tiny-cpu` with validation-loss tracking and keeps the best checkpoint. `small-cpu` only
+makes sense once more varied (approved real) data exists.
 
 ## Recommendation
 
