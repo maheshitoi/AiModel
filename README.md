@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 5 complete (dashboard layout & overview)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **Phase 6 complete (dataset & tokenizer)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## Architecture
 
@@ -76,6 +76,15 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r apps\ai-service\requirements.txt
 ```
 
+### 4. Training data
+
+```powershell
+npm run ai:data   # synthetic conversations + BPE tokenizer → ai-model/dataset/processed/
+```
+
+Edit `ai-model/config/business.json` with your real business details first. See
+[docs/dataset-and-tokenizer.md](docs/dataset-and-tokenizer.md).
+
 ## Running locally
 
 Use three terminals from the repo root:
@@ -120,6 +129,7 @@ an old one revokes the session.
 npm test -w apps/frontend                                       # Next.js component/client tests (Vitest)
 npm test -w apps/backend                                        # NestJS unit tests (Jest)
 npm run test:db -w apps/backend                                 # DB integration tests (resets Ai-model-test)
+npm run test:ai-model                                           # dataset + tokenizer tests (pytest)
 cd apps\ai-service; ..\..\.venv\Scripts\python.exe -m pytest    # AI service tests
 ```
 

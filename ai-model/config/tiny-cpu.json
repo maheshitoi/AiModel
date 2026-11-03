@@ -2,6 +2,13 @@
   "name": "tiny-cpu",
   "description": "Starter GPT for a 2-core laptop CPU without CUDA (~1.3M parameters). See docs/hardware-and-model-sizing.md.",
   "seed": 1337,
+  "dataset": {
+    "synthetic_conversations": 10000,
+    "business_facts": "config/business.json",
+    "validation_split": 0.1,
+    "max_turn_chars": 500,
+    "mask_customer_pii": true
+  },
   "tokenizer": {
     "type": "byte-level-bpe",
     "vocab_size": 4096
@@ -21,11 +28,10 @@
     "warmup_steps": 200,
     "max_steps": 5000,
     "weight_decay": 0.1,
-    "grad_clip": 1.0,
+    "grad_clip": 1,
     "eval_interval": 250,
     "eval_batches": 20,
     "checkpoint_interval": 500,
-    "validation_split": 0.1,
     "device": "auto",
     "num_threads": 4
   }

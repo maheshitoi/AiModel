@@ -1,0 +1,25 @@
+{
+  "_comment": "Facts the synthetic training conversations are built from. Replace with your real business details, then rebuild the dataset.",
+  "name": "Sunrise Wellness Clinic",
+  "assistant_name": "Sunny",
+  "phone": "+1 555 010 2030",
+  "email": "hello@sunrise-clinic.example",
+  "website": "sunrise-clinic.example",
+  "address": "42 Lake Road, Springfield",
+  "hours": {
+    "weekdays": "8:00 AM to 6:00 PM",
+    "saturday": "9:00 AM to 1:00 PM",
+    "sunday": "closed"
+  },
+  "services": [
+    { "name": "general consultation", "price": "$40", "duration": "20 minutes" },
+    { "name": "dental check-up", "price": "$55", "duration": "30 minutes" },
+    { "name": "physiotherapy session", "price": "$60", "duration": "45 minutes" },
+    { "name": "blood test", "price": "$25", "duration": "10 minutes" },
+    { "name": "eye examination", "price": "$45", "duration": "25 minutes" },
+    { "name": "vaccination", "price": "$30", "duration": "15 minutes" }
+  ],
+  "payment_methods": ["cash", "card", "mobile wallet"],
+  "parking": "Free parking is available behind the building.",
+  "emergency_note": "For a medical emergency, please call your local emergency number immediately."
+}

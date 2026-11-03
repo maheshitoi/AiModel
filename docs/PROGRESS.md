@@ -50,6 +50,14 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
 - [x] Chart palette validated (CVD/contrast) in light and dark
 - [x] 16 Vitest tests passing; visually verified via headless Chrome (desktop light/dark, mobile) (2026-11-03)
 ## Phase 6 – Dataset pipeline & tokenizer
+- [x] Synthetic conversation generator from editable `config/business.json` (13 intents incl. booking,
+      medical-advice refusal, emergency redirect, human handoff, out-of-scope fallback)
+- [x] JSON / JSONL / TXT loaders with record-level validation and line numbers
+- [x] Cleaning (NFKC, control chars, whitespace, truncation), customer-turn PII masking
+- [x] Hash-based de-duplication and stable hash-based train/validation split
+- [x] Byte-level BPE tokenizer from scratch (incremental training, injection-safe special tokens, save/load)
+- [x] `dataset.build` CLI → train/val JSONL, tokenizer.json, uint16 .bin files, stats.json; deterministic (verified)
+- [x] 34 pytest tests passing; documented in [dataset-and-tokenizer.md](dataset-and-tokenizer.md) (2026-11-03)
 ## Phase 7 – Transformer implementation
 ## Phase 8 – Training from scratch + evaluation
 ## Phase 9 – FastAPI inference service

@@ -16,12 +16,14 @@
     "dev:ai": "cd apps/ai-service && ..\\..\\.venv\\Scripts\\python.exe -m uvicorn main:app --reload --port 8000",
     "build": "npm run build -w apps/backend && npm run build -w apps/frontend",
     "lint": "npm run lint -w apps/frontend",
-    "test": "npm test -w apps/frontend && npm test -w apps/backend && npm run test:db -w apps/backend && npm run test:ai",
+    "test": "npm test -w apps/frontend && npm test -w apps/backend && npm run test:db -w apps/backend && npm run test:ai-model && npm run test:ai",
     "test:ai": "cd apps/ai-service && ..\\..\\.venv\\Scripts\\python.exe -m pytest -q",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "prisma:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema prisma/schema.prisma",
-    "db:seed": "npm run db:seed -w apps/backend"
+    "db:seed": "npm run db:seed -w apps/backend",
+    "ai:data": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m dataset.build --config config/tiny-cpu.json",
+    "test:ai-model": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m pytest -q"
   }
 }
