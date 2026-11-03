@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -23,6 +24,7 @@ AI_MODEL_ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # cp1252 on Windows when redirected
     parser = argparse.ArgumentParser(description="Benchmark training steps for a model config")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--data", type=Path, default=AI_MODEL_ROOT / "dataset" / "processed")

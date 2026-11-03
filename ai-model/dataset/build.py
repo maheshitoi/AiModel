@@ -126,6 +126,7 @@ def build(config_path: Path, inputs: list[Path], out_dir: Path, use_synthetic: b
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # cp1252 on Windows when redirected
     parser = argparse.ArgumentParser(description="Build the training dataset and tokenizer")
     parser.add_argument("--config", type=Path, required=True, help="model config JSON (e.g. config/tiny-cpu.json)")
     parser.add_argument("--input", type=Path, action="append", default=[], help="approved JSON/JSONL/TXT file (repeatable)")

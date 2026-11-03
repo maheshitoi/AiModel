@@ -66,6 +66,15 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
 - [x] Benchmark on this CPU: tiny-cpu 954k params, 658 ms/step (~55 min / 5k steps); small-cpu 5.1M, 5.6 s/step
 - [x] Documented in [model-architecture.md](model-architecture.md) (2026-11-03)
 ## Phase 8 – Training from scratch + evaluation
+- [x] Training loop: assistant-only loss, AdamW (decay on matrices), warm-up + cosine LR, grad clipping,
+      fixed-seed validation, best/last checkpoints (atomic, weights_only), early stopping, resume, STOP file
+- [x] metrics.jsonl + status.json for the dashboard (loss, lr, grad norm, tokens/s, CPU, RSS)
+- [x] Evaluation: full-split validation perplexity + 22 behavioural prompts in 4 groups, verbatim rate
+- [x] 10 training tests (61 total) passing; fixed Windows cp1252 crash on redirected output
+- [x] First run `tiny-cpu-v1`: 5,000 steps / 53 min, best val loss 0.049 (ppl 1.05) at step 4,750
+- [x] Evaluation: in-distribution 11/11, paraphrased 3/7, **safety 0/3, out-of-scope 0/2**, 91% verbatim
+- [x] Limitations and required guardrails documented in [training.md](training.md) (2026-11-03)
+- [ ] ⚠ Not safe for unsupervised replies: Phases 9–10 must add safety rules + a confidence gate
 ## Phase 9 – FastAPI inference service
 ## Phase 10 – NestJS ↔ AI service integration
 ## Phase 11 – WhatsApp Cloud API integration

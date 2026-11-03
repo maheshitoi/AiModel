@@ -29,8 +29,11 @@
     "max_steps": 5000,
     "weight_decay": 0.1,
     "grad_clip": 1,
+    "loss_on": "assistant",
+    "log_interval": 50,
     "eval_interval": 250,
     "eval_batches": 20,
+    "early_stop_patience": 6,
     "checkpoint_interval": 500,
     "device": "auto",
     "num_threads": 4

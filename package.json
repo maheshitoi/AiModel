@@ -24,6 +24,9 @@
     "prisma:studio": "prisma studio --schema prisma/schema.prisma",
     "db:seed": "npm run db:seed -w apps/backend",
     "ai:data": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m dataset.build --config config/tiny-cpu.json",
-    "test:ai-model": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m pytest -q"
+    "test:ai-model": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m pytest -q",
+    "ai:train": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m training.train --config config/tiny-cpu.json",
+    "ai:evaluate": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m evaluation.evaluate --checkpoint",
+    "ai:benchmark": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m model.benchmark --config config/tiny-cpu.json"
   }
 }
