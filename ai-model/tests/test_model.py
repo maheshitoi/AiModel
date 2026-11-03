@@ -165,3 +165,18 @@ def test_top_k_and_top_p_filtering() -> None:
     assert {sample_next(logits, top_p=0.5, generator=g) for _ in range(200)} == {0}
     assert {sample_next(logits, top_p=0.9, generator=g) for _ in range(200)} == {0, 1}
     assert sample_next(logits, temperature=0) == 0
+
+
+def test_generate_reports_unscaled_token_probabilities() -> None:
+    model = tiny()
+    prompt = torch.randint(0, 64, (1, 5))
+    probs: list[float] = []
+    out = model.generate(prompt, 6, temperature=0, token_probs=probs)
+    assert len(probs) == len(out) and all(0 < p <= 1 for p in probs)
+    # Greedy picks the argmax, so its probability is the largest in the distribution.
+    logits, _ = model(prompt)
+    assert abs(probs[0] - torch.softmax(logits[0, -1], -1).max().item()) < 1e-6
+    # Sampling temperature changes what is picked, not how the model's own probability is measured.
+    hot: list[float] = []
+    model.generate(prompt, 1, temperature=0.01, token_probs=hot)
+    assert abs(hot[0] - probs[0]) < 1e-6

@@ -6,6 +6,7 @@
 Run directory contents:
     config.json     the exact config + dataset fingerprint used
     tokenizer.json  copy of the tokenizer the model was trained with
+    business.json   copy of the business facts in the synthetic data (if any)
     best.pt         checkpoint with the lowest validation loss (use this one for inference)
     last.pt         latest checkpoint (for --resume)
     metrics.jsonl   one JSON object per log/eval event (read by the backend/dashboard)
@@ -119,9 +120,12 @@ def train(config_path: Path, data_dir: Path, out_dir: Path, resume: bool = False
     else:
         stats_file = data_dir / "stats.json"
         dataset_stats = json.loads(stats_file.read_text(encoding="utf-8")) if stats_file.exists() else None
-        run_config = {**config, "training": tcfg, "model_resolved": model_cfg.to_dict(), "device": device, "dataset": dataset_stats}
+        run_config = {**config, "training": tcfg, "model_resolved": model_cfg.to_dict(), "device": device, "dataset_stats": dataset_stats}
         (out_dir / "config.json").write_text(json.dumps(run_config, indent=2), encoding="utf-8")
         shutil.copyfile(data_dir / "tokenizer.json", out_dir / "tokenizer.json")
+        # The inference guardrails check replies against the facts the model was trained on.
+        if (data_dir / "business.json").exists():
+            shutil.copyfile(data_dir / "business.json", out_dir / "business.json")
     (out_dir / "STOP").unlink(missing_ok=True)
 
     B, T = tcfg["batch_size"], model_cfg.context_length

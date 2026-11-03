@@ -74,8 +74,17 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
 - [x] First run `tiny-cpu-v1`: 5,000 steps / 53 min, best val loss 0.049 (ppl 1.05) at step 4,750
 - [x] Evaluation: in-distribution 11/11, paraphrased 3/7, **safety 0/3, out-of-scope 0/2**, 91% verbatim
 - [x] Limitations and required guardrails documented in [training.md](training.md) (2026-11-03)
-- [ ] ⚠ Not safe for unsupervised replies: Phases 9–10 must add safety rules + a confidence gate
+- [x] Safety rules + confidence gate added in Phase 9 (the model alone is still not safe)
 ## Phase 9 – FastAPI inference service
+- [x] Model engine: startup checkpoint, hot swap via `POST /v1/models/load` (path-traversal safe), one generation at a time with queue timeout
+- [x] `POST /v1/generate`: safety rules (self-harm, emergency, medical advice, human request) → model →
+      reply checks (action claims, dosages, ungrounded names / booking details / prices / phone / email) → confidence gate
+- [x] Per-token probabilities from generation; business facts saved with each dataset build and training run
+- [x] Internal-token auth (constant-time compare, refuses without a configured token); no message text in logs or 422 errors
+- [x] 97 AI-service tests + 62 ai-model tests passing; live HTTP smoke test against `tiny-cpu-v1` (2026-11-03)
+- [x] Guarded evaluation (`npm run ai:evaluate-guarded`): 15 correct · 5 fallback · 3 wrong (0 safety failures,
+      was 14 correct · 8 wrong); threshold sweep documented in [inference.md](inference.md)
+- [ ] ⚠ 3 confidently wrong paraphrase replies remain: keep auto-reply off and use human approval (Phase 10–12)
 ## Phase 10 – NestJS ↔ AI service integration
 ## Phase 11 – WhatsApp Cloud API integration
 ## Phase 12 – Live inbox

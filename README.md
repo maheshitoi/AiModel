@@ -4,9 +4,10 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 8 complete (first model trained and evaluated)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
-> The current model answers template-like questions well but **fails on emergencies and unfamiliar
-> requests**. Read [docs/training.md](docs/training.md) before enabling any automatic replies.
+> Status: **Phase 9 complete (guarded inference service)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> The model itself still fails on emergencies and unfamiliar requests. The inference service puts
+> safety rules, reply checks and a confidence gate around it ([docs/inference.md](docs/inference.md)).
+> It still sends 3 wrong (not dangerous) replies out of 22 test prompts, so keep auto-reply off.
 
 ## Architecture
 
@@ -96,13 +97,24 @@ npm run ai:evaluate -- checkpoints/<run>/best.pt          # writes evaluation.md
 
 See [docs/training.md](docs/training.md).
 
+### 6. Inference service
+
+Set `AI_SERVICE_TOKEN` (at least 32 random characters) and `AI_MODEL_CHECKPOINT` (for example
+`tiny-cpu-v1/best.pt`) in `.env`, then check what customers would receive:
+
+```powershell
+npm run ai:evaluate-guarded -- tiny-cpu-v1/best.pt   # writes evaluation-guarded.md next to the checkpoint
+```
+
+See [docs/inference.md](docs/inference.md).
+
 ## Running locally
 
 Use three terminals from the repo root:
 
 ```powershell
 # AI service  → http://localhost:8000/health  (docs: /docs)
-cd apps\ai-service; ..\..\.venv\Scripts\python.exe -m uvicorn main:app --port 8000
+npm run dev:ai
 
 # Backend     → http://localhost:4000/api/v1/health  (Swagger: /api/docs)
 npm run dev:backend
@@ -127,6 +139,9 @@ require `Authorization: Bearer <accessToken>` unless noted.
 | Dashboard | `GET /dashboard/overview`, `GET /dashboard/messages-chart?range=daily\|weekly\|monthly` (`dashboard:read`) |
 | Health | `GET /health` (public) |
 
+The AI service (`:8000`) has its own internal API, which only the backend calls with
+`X-Internal-Token`: `POST /v1/generate` and `/v1/models/*`. See [docs/inference.md](docs/inference.md).
+
 Responses are `{ "success": true, "data": ..., "meta"?: { page, pageSize, total, totalPages } }`;
 errors are `{ "success": false, "error": { statusCode, message, details?, path, timestamp } }`.
 
@@ -140,8 +155,8 @@ an old one revokes the session.
 npm test -w apps/frontend                                       # Next.js component/client tests (Vitest)
 npm test -w apps/backend                                        # NestJS unit tests (Jest)
 npm run test:db -w apps/backend                                 # DB integration tests (resets Ai-model-test)
-npm run test:ai-model                                           # dataset + tokenizer tests (pytest)
-cd apps\ai-service; ..\..\.venv\Scripts\python.exe -m pytest    # AI service tests
+npm run test:ai-model                                           # tokenizer, dataset, model, training (pytest)
+npm run test:ai                                                 # inference service + guardrails (pytest)
 ```
 
 ## Frontend notes
@@ -158,6 +173,8 @@ cd apps\ai-service; ..\..\.venv\Scripts\python.exe -m pytest    # AI service tes
 - Secrets live only in `.env` (git-ignored). Never commit real credentials.
 - WhatsApp access tokens are never returned by the API or shipped to the browser.
 - No pretrained weights and no hosted LLM APIs are used for response generation.
+- The AI service accepts `/v1` requests only with `AI_SERVICE_TOKEN`, binds to localhost by default,
+  and never logs message text. Validation errors don't echo the submitted text either.
 
 ## Deployment
 

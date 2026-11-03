@@ -8,6 +8,7 @@ Outputs (default dataset/processed/):
     tokenizer.json           byte-level BPE trained on the training split only
     train.bin, val.bin       uint16 token ids, conversations concatenated
     stats.json               counts, checksums and settings for reproducibility
+    business.json            copy of the business facts used for synthetic data
 
 Only files passed with --input are used besides the synthetic data. Customer conversations must be
 reviewed and approved before they are exported to such a file (see docs).
@@ -18,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import sys
 import time
 from collections import Counter
@@ -57,7 +59,9 @@ def build(config_path: Path, inputs: list[Path], out_dir: Path, use_synthetic: b
     conversations: list[Conversation] = []
     sources: list[dict] = []
     if use_synthetic:
-        business = Business.load(AI_MODEL_ROOT / ds_cfg["business_facts"])
+        facts_path = AI_MODEL_ROOT / ds_cfg["business_facts"]
+        business = Business.load(facts_path)
+        shutil.copyfile(facts_path, out_dir / "business.json")
         synthetic = generate(business, ds_cfg["synthetic_conversations"], seed)
         conversations += synthetic
         sources.append({"source": "synthetic", "records": len(synthetic), "issues": 0, "business": business.name})

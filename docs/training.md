@@ -100,6 +100,9 @@ Reply confidence was measured (the lowest token probability in each reply):
 
 ### Required before auto-replies (Phases 9–10)
 
+Items 1–3 are implemented in the inference service. See [inference.md](inference.md) for how
+they work and the measured results. Item 4 belongs to the backend (Phase 10).
+
 1. **Deterministic safety rules that run before the model:** emergency and medical-advice detection →
    a fixed safe reply plus immediate human escalation. The model never handles these messages.
 2. **Confidence gate:** if the reply's lowest token probability is below a threshold (start at 0.5),

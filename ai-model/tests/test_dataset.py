@@ -147,6 +147,7 @@ def test_build_end_to_end(tmp_path: Path) -> None:
 
     assert stats["records"]["train"] + stats["records"]["validation"] == stats["records"]["unique"]
     assert stats["tokenizer"]["vocab_size"] <= 512
+    assert json.loads((out / "business.json").read_text(encoding="utf-8"))["name"] == stats["sources"][0]["business"]
     tok = BPETokenizer.load(out / "tokenizer.json")
     train_ids = np.fromfile(out / "train.bin", dtype=np.uint16)
     assert len(train_ids) == stats["tokens"]["train"] and train_ids.max() < tok.vocab_size

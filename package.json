@@ -27,6 +27,7 @@
     "test:ai-model": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m pytest -q",
     "ai:train": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m training.train --config config/tiny-cpu.json",
     "ai:evaluate": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m evaluation.evaluate --checkpoint",
+    "ai:evaluate-guarded": "cd apps/ai-service && ..\\..\\.venv\\Scripts\\python.exe -m app.evaluate_guarded --checkpoint",
     "ai:benchmark": "cd ai-model && ..\\.venv\\Scripts\\python.exe -m model.benchmark --config config/tiny-cpu.json"
   }
 }

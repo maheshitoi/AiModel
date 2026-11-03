@@ -116,6 +116,10 @@ def test_training_learns_and_writes_run_files(run_env: dict) -> None:
     first_train = next(e for e in events if e["type"] == "train")
     assert evals[-1]["val_loss"] < first_train["train_loss"] - 1.0  # it learned something
     assert json.loads((out / "status.json").read_text())["status"] == "completed"
+    run_config = json.loads((out / "config.json").read_text(encoding="utf-8"))
+    # The dataset settings are kept next to the build fingerprint, not overwritten by it.
+    assert run_config["dataset"] == json.loads(run_env["cfg"].read_text(encoding="utf-8"))["dataset"]
+    assert "dataset_stats" in run_config
     best = read_checkpoint(out / "best.pt")
     assert best["best_val_loss"] == pytest.approx(min(e["val_loss"] for e in evals), abs=1e-3)
 

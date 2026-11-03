@@ -188,10 +188,13 @@ class GPT(nn.Module):
         top_p: float = 1.0,
         stop_ids: set[int] | None = None,
         generator: torch.Generator | None = None,
+        token_probs: list[float] | None = None,
     ) -> torch.Tensor:
         """Autoregressive sampling for a single sequence (B = 1). Returns only the newly generated ids.
 
         temperature 0 means greedy decoding. The prompt is left-cropped to the context length.
+        If `token_probs` is given, the model's unscaled probability of each chosen token (before
+        temperature / top-k / top-p) is appended to it: a confidence signal for the caller.
         """
         if idx.size(0) != 1:
             raise ValueError("generate() expects a single sequence")
@@ -202,6 +205,8 @@ class GPT(nn.Module):
             window = idx[:, -self.cfg.context_length :]
             logits, _ = self(window)
             next_id = sample_next(logits[0, -1], temperature, top_k, top_p, generator)
+            if token_probs is not None:
+                token_probs.append(F.softmax(logits[0, -1].float(), dim=-1)[next_id].item())
             new.append(next_id)
             if stop_ids and next_id in stop_ids:
                 break

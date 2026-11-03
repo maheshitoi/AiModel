@@ -27,6 +27,12 @@ class Reply:
     input_tokens: int
     output_tokens: int
     finished: bool  # True if the model emitted <|end|> before hitting max_new_tokens
+    token_probs: tuple[float, ...] = ()  # model probability of each generated token, incl. the stop token
+
+    @property
+    def min_token_prob(self) -> float:
+        """The least confident step of the reply (0 if nothing was generated)."""
+        return min(self.token_probs, default=0.0)
 
 
 def build_prompt(tokenizer: BPETokenizer, history: list[Turn], context_length: int, reserve: int) -> list[int]:
@@ -51,6 +57,7 @@ def generate_reply(model: GPT, tokenizer: BPETokenizer, history: list[Turn], set
     prompt = build_prompt(tokenizer, history, model.cfg.context_length, reserve)
     device = next(model.parameters()).device
     generator = torch.Generator(device=device).manual_seed(settings.seed) if settings.seed is not None else None
+    probs: list[float] = []
     stop = {tokenizer.end_id, *(tokenizer.special_id(t) for t in ("<|customer|>", "<|assistant|>", "<|system|>", "<|pad|>"))}
     out = model.generate(
         torch.tensor([prompt], device=device),
@@ -60,7 +67,8 @@ def generate_reply(model: GPT, tokenizer: BPETokenizer, history: list[Turn], set
         top_p=settings.top_p,
         stop_ids=stop,
         generator=generator,
+        token_probs=probs,
     ).tolist()
     finished = bool(out) and out[-1] == tokenizer.end_id
     content = [i for i in out if i not in stop]
-    return Reply(text=tokenizer.decode(content).strip(), input_tokens=len(prompt), output_tokens=len(out), finished=finished)
+    return Reply(text=tokenizer.decode(content).strip(), input_tokens=len(prompt), output_tokens=len(out), finished=finished, token_probs=tuple(probs))
