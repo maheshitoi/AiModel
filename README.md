@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 9 complete (guarded inference service)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **Phase 10 complete (backend ↔ AI service integration)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 > The model itself still fails on emergencies and unfamiliar requests. The inference service puts
 > safety rules, reply checks and a confidence gate around it ([docs/inference.md](docs/inference.md)).
 > It still sends 3 wrong (not dangerous) replies out of 22 test prompts, so keep auto-reply off.
@@ -137,6 +137,7 @@ require `Authorization: Bearer <accessToken>` unless noted.
 | Settings | `GET /settings`, `GET /settings/:key` (`settings:read`), `PATCH /settings/:key` (`settings:manage`) |
 | Logs | `GET /logs` (`logs:read`), `GET /logs/audit` (`audit:read`) |
 | Dashboard | `GET /dashboard/overview`, `GET /dashboard/messages-chart?range=daily\|weekly\|monthly` (`dashboard:read`) |
+| AI | `GET /ai/status`, `GET /ai/checkpoints` (`models:read`), `POST /ai/models/activate` (`models:manage`), `POST /ai/test`, `GET /ai/decisions`, `POST /ai/decisions/:id/approve\|dismiss` (`conversations:*`). See [docs/ai-integration.md](docs/ai-integration.md) |
 | Health | `GET /health` (public) |
 
 The AI service (`:8000`) has its own internal API, which only the backend calls with

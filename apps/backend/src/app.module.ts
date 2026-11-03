@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { join } from 'node:path';
+import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard, PermissionsGuard } from './auth/guards';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     DashboardModule,
+    AiModule,
     HealthModule,
   ],
   providers: [

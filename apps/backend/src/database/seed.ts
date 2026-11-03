@@ -1,8 +1,10 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { isDeepStrictEqual } from 'node:util';
 import { PASSWORD_MIN } from '../auth/dto/auth.dto';
 import { hashPassword } from '../auth/password';
 import { ROLE_PERMISSIONS } from '../common/permissions';
-import { SETTING_DEFAULTS } from '../settings/settings.defaults';
+import { LEGACY_DEFAULTS, SETTING_DEFAULTS } from '../settings/settings.defaults';
+import type { SettingKey } from '../settings/settings.dto';
 
 export const DEFAULT_MODEL_NAME = 'my-own-gpt';
 
@@ -27,7 +29,13 @@ export async function seedDatabase(prisma: PrismaClient, admin?: SeedAdmin): Pro
     }
     for (const [key, setting] of Object.entries(SETTING_DEFAULTS)) {
       const data = { description: setting.description, value: setting.value as unknown as Prisma.InputJsonValue };
-      await tx.systemSetting.upsert({ where: { key }, create: { key, ...data }, update: {} });
+      const existing = await tx.systemSetting.findUnique({ where: { key } });
+      if (!existing) {
+        await tx.systemSetting.create({ data: { key, ...data } });
+      } else if (LEGACY_DEFAULTS[key as SettingKey]?.some((old) => isDeepStrictEqual(old, existing.value))) {
+        // Still an untouched old default: move it to the current default.
+        await tx.systemSetting.update({ where: { key }, data: { value: data.value } });
+      }
     }
     await tx.aIModel.upsert({
       where: { name: DEFAULT_MODEL_NAME },

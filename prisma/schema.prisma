@@ -49,6 +49,7 @@ model User {
   uploadedDatasets      TrainingDataset[] @relation("DatasetUploadedBy")
   approvedDatasets      TrainingDataset[] @relation("DatasetApprovedBy")
   trainingJobs          TrainingJob[]
+  reviewedAiDecisions   AIDecision[]
   auditLogs             AuditLog[]
   notifications         Notification[]
   updatedSettings       SystemSetting[]
@@ -123,6 +124,9 @@ model Conversation {
   lastMessagePreview String?
   // Start of the 24h customer-service window for free-form replies.
   lastInboundAt      DateTime?
+  // Set when the AI handed over or could not answer; cleared by staff.
+  needsAttention     Boolean            @default(false)
+  attentionReason    String? // e.g. "emergency", "low_confidence", "ai_unavailable"
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -130,10 +134,12 @@ model Conversation {
   assignedTo      User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
   messages        Message[]
   aiUsage         AIUsage[]
+  aiDecisions     AIDecision[]
 
   @@unique([whatsAppAccountId, customerWaId])
   @@index([whatsAppAccountId, lastMessageAt(sort: Desc)])
   @@index([status, lastMessageAt(sort: Desc)])
+  @@index([needsAttention, lastMessageAt(sort: Desc)])
 }
 
 enum MessageDirection {
@@ -203,6 +209,8 @@ model Message {
   sentBy        User?                  @relation(fields: [sentById], references: [id], onDelete: SetNull)
   statusHistory MessageStatusHistory[]
   aiUsage       AIUsage?
+  aiDecision    AIDecision?            @relation("AIDecisionInbound")
+  sentDecision  AIDecision?            @relation("AIDecisionOutbound")
 
   @@index([conversationId, occurredAt(sort: Desc)])
   @@index([occurredAt(sort: Desc)])
@@ -258,7 +266,7 @@ model ModelVersion {
   parameterCount Int
   vocabSize      Int
   contextLength  Int
-  checkpointPath String?
+  checkpointPath String?            @unique // relative to CHECKPOINT_DIR, e.g. "tiny-cpu-v1/best.pt"
   tokenizerPath  String?
   evalMetrics    Json?
   trainedAt      DateTime?
@@ -269,8 +277,54 @@ model ModelVersion {
   model       AIModel      @relation(fields: [modelId], references: [id], onDelete: Cascade)
   trainingJob TrainingJob?
   aiUsage     AIUsage[]
+  aiDecisions AIDecision[]
 
   @@unique([modelId, version])
+}
+
+// What the AI service decided for one inbound message. Text-only: the reply is ours, never the
+// customer's message. While auto-reply is off, decisions wait as SUGGESTED for a person to approve.
+
+enum AIDecisionAction {
+  REPLY // the model's reply passed every check
+  FALLBACK // the model's reply was rejected; text is the fallback reply
+  HANDOFF // a safety/handoff rule matched; text is a fixed reply
+}
+
+enum AIDecisionStatus {
+  SUGGESTED // waiting for staff
+  QUEUED // an outbound message was created (automatically or by approval)
+  DISMISSED // staff chose not to send it
+}
+
+model AIDecision {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  conversationId    String           @db.Uuid
+  // Unique => one decision per inbound message, even if a webhook is processed twice.
+  inboundMessageId  String           @unique @db.Uuid
+  modelVersionId    String?          @db.Uuid
+  action            AIDecisionAction
+  reason            String // e.g. "model_reply", "emergency", "low_confidence"
+  detail            String?
+  text              String // safe to send
+  modelText         String? // the model's own reply, for review only
+  confidence        Float?
+  handoffRequired   Boolean
+  status            AIDecisionStatus
+  outboundMessageId String?          @unique @db.Uuid
+  reviewedById      String?          @db.Uuid
+  reviewedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  inboundMessage  Message       @relation("AIDecisionInbound", fields: [inboundMessageId], references: [id], onDelete: Cascade)
+  outboundMessage Message?      @relation("AIDecisionOutbound", fields: [outboundMessageId], references: [id], onDelete: SetNull)
+  modelVersion    ModelVersion? @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
+  reviewedBy      User?         @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
 }
 
 // ─────────────────────────── Training ───────────────────────────

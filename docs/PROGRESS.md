@@ -86,6 +86,20 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
       was 14 correct · 8 wrong); threshold sweep documented in [inference.md](inference.md)
 - [ ] ⚠ 3 confidently wrong paraphrase replies remain: keep auto-reply off and use human approval (Phase 10–12)
 ## Phase 10 – NestJS ↔ AI service integration
+- [x] Migration `ai_decisions`: `AIDecision` (unique per inbound message), `Conversation.needsAttention`/`attentionReason`,
+      unique `ModelVersion.checkpointPath` (also fixed a stale init-migration checksum; the schema itself was unchanged)
+- [x] AI client: internal token, timeout, one retry when busy, typed errors without request bodies
+- [x] `handleInbound`: history → AI → decision + usage in one transaction; idempotent and race-safe; skips non-text,
+      AI-off, human/closed conversations and superseded messages; failures logged (no text) and flagged
+- [x] Send policy: suggestions by default; emergency/self-harm replies sent at once; handoffs switch the conversation to HUMAN
+- [x] Suggestion approve (optionally edited → recorded as staff-written) / dismiss, atomic; audit logged
+- [x] Model registry: versions per checkpoint, audited activation, active version re-loaded if the AI service drifts
+- [x] `ai.generation` settings: greedy defaults, `minConfidence`, `historyMessages`, `sendSafetyRepliesImmediately`;
+      seed upgrades untouched legacy defaults (applied to `Ai-model`)
+- [x] 40 backend unit tests passing; live smoke test via the backend: status, activate, test playground (2026-11-03)
+- [x] DB integration tests `test/ai-reply.int-spec.ts`: 11/11 passing against `Ai-model-test` (migrated with `migrate deploy`, no reset)
+- [ ] Full `npm run test:db` (with its database reset) to be run by the user: Prisma blocks the AI agent from resetting
+- [x] Documented in [ai-integration.md](ai-integration.md)
 ## Phase 11 – WhatsApp Cloud API integration
 ## Phase 12 – Live inbox
 ## Phase 13 – Logs, usage, analytics

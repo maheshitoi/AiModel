@@ -35,6 +35,22 @@ export class AiGenerationSettingsDto {
   @IsString()
   @MaxLength(1000)
   fallbackReply: string;
+
+  /** Model replies whose least confident token is below this get the fallback reply. */
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  minConfidence: number;
+
+  /** How many recent text messages are sent to the model as context. */
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  historyMessages: number;
+
+  /** Send the fixed emergency / self-harm replies at once, even while auto-reply is off. */
+  @IsBoolean()
+  sendSafetyRepliesImmediately: boolean;
 }
 
 export class NotificationSettingsDto {

@@ -19,6 +19,16 @@ class EnvironmentVariables {
   @IsUrl({ require_tld: false })
   AI_SERVICE_URL: string = 'http://localhost:8000';
 
+  // Sent to the AI service as X-Internal-Token; must equal the AI service's own AI_SERVICE_TOKEN.
+  @IsString()
+  @MinLength(32)
+  AI_SERVICE_TOKEN: string;
+
+  @IsInt()
+  @Min(1000)
+  @Max(120_000)
+  AI_REQUEST_TIMEOUT_MS: number = 15_000;
+
   @IsString()
   @MinLength(32)
   JWT_ACCESS_SECRET: string;
