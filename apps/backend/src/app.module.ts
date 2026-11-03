@@ -8,6 +8,7 @@ import { JwtAuthGuard, PermissionsGuard } from './auth/guards';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { ResponseInterceptor } from './common/response.interceptor';
 import { validateEnv } from './config/env.validation';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
 import { LogsModule } from './logs/logs.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module';
     SettingsModule,
     AuthModule,
     UsersModule,
+    DashboardModule,
     HealthModule,
   ],
   providers: [

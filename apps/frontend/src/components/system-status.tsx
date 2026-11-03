@@ -1,70 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/services/api";
-import type { HealthReport } from "@/types/health";
+import { CircleCheck, CircleX, LoaderCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useHealth } from "@/hooks/queries";
+import { cn } from "@/lib/utils";
+import type { DependencyStatus } from "@/types/health";
 
-const POLL_MS = 5000;
-
-type State =
-  | { kind: "loading" }
-  | { kind: "ok"; report: HealthReport }
-  | { kind: "error"; message: string };
-
-export function SystemStatus() {
-  const [state, setState] = useState<State>({ kind: "loading" });
-
-  useEffect(() => {
-    let active = true;
-    const load = () =>
-      api
-        .health()
-        .then((report) => active && setState({ kind: "ok", report }))
-        .catch((e: Error) => active && setState({ kind: "error", message: e.message }));
-    load();
-    const id = setInterval(load, POLL_MS);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, []);
-
-  const backend =
-    state.kind === "ok"
-      ? { status: "up" as const }
-      : state.kind === "error"
-        ? { status: "down" as const, error: state.message }
-        : undefined;
+/** Compact indicator for the top bar. Status is never color-only: icon + text label. */
+export function HealthIndicator() {
+  const { data, isPending, isError } = useHealth();
+  const ok = data?.status === "ok";
+  const label = isPending ? "Checking…" : isError ? "API unreachable" : ok ? "All systems up" : "Degraded";
+  const Icon = isPending ? LoaderCircle : ok ? CircleCheck : CircleX;
 
   return (
-    <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-      <StatusRow name="Backend API (NestJS)" dep={backend} />
-      <StatusRow name="PostgreSQL" dep={state.kind === "ok" ? state.report.dependencies.database : undefined} />
-      <StatusRow name="AI service (FastAPI)" dep={state.kind === "ok" ? state.report.dependencies.aiService : undefined} />
-    </ul>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="hidden items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground sm:flex" tabIndex={0}>
+          <Icon className={cn("size-3.5", isPending && "animate-spin", !isPending && (ok ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"))} aria-hidden />
+          {label}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        {data ? `Database: ${data.dependencies.database.status} · AI service: ${data.dependencies.aiService.status}` : label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
-function StatusRow({
-  name,
-  dep,
-}: {
-  name: string;
-  dep?: { status: "up" | "down"; latencyMs?: number; error?: string };
-}) {
-  const color = !dep ? "bg-zinc-400" : dep.status === "up" ? "bg-emerald-500" : "bg-red-500";
-  const label = !dep ? "unknown" : dep.status === "up" ? "up" : "down";
+/** Detailed per-dependency list for the overview page. */
+export function SystemStatusList() {
+  const { data, isError, error } = useHealth();
+  const rows: [string, DependencyStatus | undefined][] = [
+    ["Backend API (NestJS)", isError ? { status: "down", latencyMs: 0, error: error.message } : data && { status: "up", latencyMs: 0 }],
+    ["PostgreSQL", data?.dependencies.database],
+    ["AI service (FastAPI)", data?.dependencies.aiService],
+  ];
+
   return (
-    <li className="flex items-start justify-between gap-4 px-4 py-3">
-      <div>
-        <p className="font-medium">{name}</p>
-        {dep?.error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{dep.error}</p>}
-      </div>
-      <span className="flex shrink-0 items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-        <span className={`h-2.5 w-2.5 rounded-full ${color}`} aria-hidden />
-        {label}
-        {dep?.latencyMs !== undefined && ` · ${dep.latencyMs} ms`}
-      </span>
-    </li>
+    <ul className="divide-y">
+      {rows.map(([name, dep]) => (
+        <li key={name} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{name}</p>
+            {dep?.error && <p className="mt-0.5 truncate text-xs text-muted-foreground">{dep.error}</p>}
+          </div>
+          <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+            {!dep ? (
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+            ) : dep.status === "up" ? (
+              <CircleCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            ) : (
+              <CircleX className="size-3.5 text-destructive" aria-hidden />
+            )}
+            {dep ? (dep.status === "up" ? "Up" : "Down") : "Checking"}
+            {dep?.status === "up" && dep.latencyMs > 0 && ` · ${dep.latencyMs} ms`}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

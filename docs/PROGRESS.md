@@ -38,6 +38,17 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
 - [x] 25 unit tests passing; 27-check HTTP smoke test passing against the running backend (2026-11-03)
 
 ## Phase 5 – Frontend layout & dashboard (shadcn/ui)
+- [x] shadcn/ui (Radix, Tailwind v4), next-themes light/dark/system, sonner toasts, TanStack Query
+- [x] Auth context: in-memory access token, session restore from refresh cookie, single-flight refresh + replay on 401
+- [x] Login page (zod validation, password visibility, server errors); client-side route guard
+- [x] App shell: permission-filtered sidebar, mobile drawer, health indicator, theme toggle, user menu
+- [x] Overview: 8 KPI cards, messages chart (daily/weekly/monthly, tooltip, legend, table view), recent
+      conversations, recent errors, model status, system health — loading/empty/error states throughout
+- [x] Backend: `GET /dashboard/overview`, `GET /dashboard/messages-chart` (timezone-aware buckets, SQL verified)
+- [x] Account page: profile, change password, sessions with revoke
+- [x] Placeholder pages for later phases (labelled with their phase)
+- [x] Chart palette validated (CVD/contrast) in light and dark
+- [x] 16 Vitest tests passing; visually verified via headless Chrome (desktop light/dark, mobile) (2026-11-03)
 ## Phase 6 – Dataset pipeline & tokenizer
 ## Phase 7 – Transformer implementation
 ## Phase 8 – Training from scratch + evaluation

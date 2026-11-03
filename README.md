@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 4 complete (auth & core APIs)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **Phase 5 complete (dashboard layout & overview)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## Architecture
 
@@ -104,6 +104,7 @@ require `Authorization: Bearer <accessToken>` unless noted.
 | Users | `GET/POST /users`, `PATCH /users/:id`, `GET /roles` (`users:manage`) |
 | Settings | `GET /settings`, `GET /settings/:key` (`settings:read`), `PATCH /settings/:key` (`settings:manage`) |
 | Logs | `GET /logs` (`logs:read`), `GET /logs/audit` (`audit:read`) |
+| Dashboard | `GET /dashboard/overview`, `GET /dashboard/messages-chart?range=daily\|weekly\|monthly` (`dashboard:read`) |
 | Health | `GET /health` (public) |
 
 Responses are `{ "success": true, "data": ..., "meta"?: { page, pageSize, total, totalPages } }`;
@@ -116,10 +117,20 @@ an old one revokes the session.
 ## Tests
 
 ```powershell
+npm test -w apps/frontend                                       # Next.js component/client tests (Vitest)
 npm test -w apps/backend                                        # NestJS unit tests (Jest)
 npm run test:db -w apps/backend                                 # DB integration tests (resets Ai-model-test)
 cd apps\ai-service; ..\..\.venv\Scripts\python.exe -m pytest    # AI service tests
 ```
+
+## Frontend notes
+
+- UI components live in `apps/frontend/src/components/ui` (shadcn/ui, Radix base). New components:
+  `npx shadcn@4.23.0 add <name>` from `apps/frontend`. The CLI writes `import { cn } from "cn"`;
+  change it to `@/lib/utils`, because this project uses the established `clsx` + `tailwind-merge` helper.
+- Chart series colors are the validated `--chart-1` / `--chart-2` tokens in `globals.css`.
+- npm 9 can crash while resolving vitest's optional peers (`edgesOut`). Add `--legacy-peer-deps`
+  when installing frontend dev tools.
 
 ## Security notes
 
