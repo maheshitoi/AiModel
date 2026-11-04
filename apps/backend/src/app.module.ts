@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { join } from 'node:path';
 import { AiModule } from './ai/ai.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { JwtAuthGuard, PermissionsGuard } from './auth/guards';
@@ -39,6 +40,7 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     WhatsAppModule,
     ConversationsModule,
     RealtimeModule,
+    AnalyticsModule,
     HealthModule,
   ],
   providers: [

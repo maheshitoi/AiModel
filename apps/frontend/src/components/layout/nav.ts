@@ -29,7 +29,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/", label: "Overview", icon: LayoutDashboard, permission: "dashboard:read" },
       { href: "/inbox", label: "Inbox", icon: MessageCircle, permission: "conversations:read" },
-      { href: "/messages", label: "Messages", icon: MessagesSquare, permission: "messages:read", phase: 13 },
+      { href: "/messages", label: "Messages", icon: MessagesSquare, permission: "messages:read" },
     ],
   },
   {
@@ -43,8 +43,8 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Insights",
     items: [
-      { href: "/usage", label: "Usage", icon: ChartColumn, permission: "usage:read", phase: 13 },
-      { href: "/logs", label: "System logs", icon: ScrollText, permission: "logs:read", phase: 13 },
+      { href: "/usage", label: "Usage", icon: ChartColumn, permission: "usage:read" },
+      { href: "/logs", label: "System logs", icon: ScrollText, permission: "logs:read" },
     ],
   },
   {
@@ -52,7 +52,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone, permission: "settings:read" },
       { href: "/settings/ai", label: "AI settings", icon: SlidersHorizontal, permission: "settings:read" },
-      { href: "/users", label: "Users & security", icon: Users, permission: "users:manage", phase: 13 },
+      { href: "/users", label: "Users & security", icon: Users, permission: "users:manage" },
     ],
   },
 ];

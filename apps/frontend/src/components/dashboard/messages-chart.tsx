@@ -65,7 +65,7 @@ export function MessagesChart() {
           <EmptyState
             icon={ChartColumn}
             title="No messages yet"
-            description="Message volume appears here once your WhatsApp Business number is connected (Phase 11)."
+            description="Message volume appears here once your WhatsApp Business number is connected (Settings → WhatsApp)."
           />
         ) : (
           <>

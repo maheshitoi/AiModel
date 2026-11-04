@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { hashPassword } from '../auth/password';
 import type { AuthUser, RequestMeta } from '../common/auth.types';
@@ -93,6 +93,17 @@ export class UsersService {
         tx,
       );
       return user;
+    });
+  }
+
+  /** Login history for one user (one row per sign-in); never includes the refresh token. */
+  async sessions(id: string) {
+    if (!(await this.prisma.user.count({ where: { id } }))) throw new NotFoundException('User not found');
+    return this.prisma.session.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, userAgent: true, ipAddress: true, createdAt: true, lastUsedAt: true, expiresAt: true, revokedAt: true },
     });
   }
 

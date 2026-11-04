@@ -35,6 +35,11 @@ export class UsersController {
     return this.users.update(id, dto, actor, requestMeta(req));
   }
 
+  @Get('users/:id/sessions')
+  sessions(@Param('id', ParseUUIDPipe) id: string) {
+    return this.users.sessions(id);
+  }
+
   @Get('roles')
   roles() {
     return this.users.roles();

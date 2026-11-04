@@ -209,3 +209,120 @@ export interface InboxMessage {
   sentBy: { id: string; name: string } | null;
   aiDecision: { id: string; action: AiDecision["action"]; reason: string; status: AiDecision["status"]; confidence: number | null } | null;
 }
+
+// ── Analytics & logs (apps/backend/src/analytics, src/logs) ─────────────────
+export interface UsageDay {
+  day: string;
+  requests: number;
+  failures: number;
+  avgLatencyMs: number | null;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface UsageReport {
+  days: number;
+  since: string;
+  timezone: string;
+  ai: {
+    requests: number;
+    succeeded: number;
+    failed: number;
+    successRate: number | null;
+    inputTokens: number;
+    outputTokens: number;
+    avgLatencyMs: number | null;
+    p95LatencyMs: number | null;
+    byModel: { version: number | null; checkpoint: string | null; requests: number }[];
+  };
+  decisions: {
+    byAction: Partial<Record<"REPLY" | "FALLBACK" | "HANDOFF", number>>;
+    byReason: { reason: string; count: number }[];
+    outcomes: Partial<Record<"automatic" | "approved" | "edited" | "dismissed" | "pending", number>>;
+  };
+  messages: {
+    inbound: number;
+    outbound: number;
+    outboundByStatus: Partial<Record<MessageStatus, number>>;
+    failuresByCode: { code: string | null; count: number }[];
+  };
+  series: UsageDay[];
+}
+
+export interface MessageRow {
+  id: string;
+  direction: "INBOUND" | "OUTBOUND";
+  type: string;
+  source: InboxMessage["source"];
+  body: string | null;
+  status: MessageStatus;
+  errorCode: string | null;
+  errorMessage: string | null;
+  occurredAt: string;
+  sentBy: { name: string } | null;
+  conversation: { id: string; customerName: string | null; customerWaId: string };
+}
+
+export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
+export type LogCategory = "BACKEND" | "WEBHOOK" | "AI" | "WHATSAPP" | "DATABASE" | "TRAINING" | "SECURITY";
+
+export interface SystemLogEntry {
+  id: string;
+  level: LogLevel;
+  category: LogCategory;
+  event: string;
+  message: string;
+  context: Record<string, unknown> | null;
+  conversationId: string | null;
+  messageId: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string | null;
+  actor: { email: string } | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  before: unknown;
+  after: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+// ── Users (apps/backend/src/users) ──────────────────────────────────────────
+export interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: string[];
+}
+
+export interface UserRow {
+  id: string;
+  email: string;
+  name: string;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  lockedUntil: string | null;
+  createdAt: string;
+  role: { id: string; name: string };
+}
+
+export interface UserSession {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+}
+
+export interface SecuritySettings {
+  accessTokenTtlMinutes: number;
+  refreshTokenTtlDays: number;
+  maxFailedLogins: number;
+}

@@ -7,13 +7,21 @@ import type {
   AiGenerationSettings,
   AiStatus,
   ChartRange,
+  AuditLogEntry,
   ConversationDetail,
   ConversationSummary,
   InboxFilter,
   InboxMessage,
   DashboardOverview,
   MessageChartPoint,
+  MessageRow,
+  Role,
+  SecuritySettings,
   SessionInfo,
+  SystemLogEntry,
+  UsageReport,
+  UserRow,
+  UserSession,
   WhatsAppAccount,
 } from "@/types/api";
 import type { HealthReport } from "@/types/health";
@@ -32,7 +40,17 @@ export const queryKeys = {
   conversations: (filter: InboxFilter, search: string) => ["inbox", "conversations", filter, search] as const,
   conversation: (id: string) => ["inbox", "conversation", id] as const,
   messages: (id: string) => ["inbox", "messages", id] as const,
+  usage: (days: number) => ["usage", days] as const,
+  messageSearch: (q: object) => ["messages", q] as const,
+  systemLogs: (q: object) => ["logs", "system", q] as const,
+  auditLogs: (q: object) => ["logs", "audit", q] as const,
+  users: (q: object) => ["users", q] as const,
+  roles: ["roles"] as const,
+  userSessions: (id: string) => ["users", id, "sessions"] as const,
+  securitySettings: ["settings", "security"] as const,
 };
+
+type Query = Record<string, string | number | boolean | undefined>;
 
 export const useHealth = () =>
   useQuery({ queryKey: queryKeys.health, queryFn: () => api.get<HealthReport>("/health"), refetchInterval: 15_000 });
@@ -85,3 +103,26 @@ export const useMessages = (id: string | null) =>
     getNextPageParam: (last) => (last.hasMore ? last.items.at(-1)?.occurredAt : undefined),
     enabled: !!id,
   });
+
+export const useUsage = (days: number) =>
+  useQuery({ queryKey: queryKeys.usage(days), queryFn: () => api.get<UsageReport>("/usage", { query: { days } }), placeholderData: keepPreviousData });
+
+export const useMessageSearch = (q: Query) =>
+  useQuery({ queryKey: queryKeys.messageSearch(q), queryFn: () => api.page<MessageRow>("/messages", { query: q }), placeholderData: keepPreviousData });
+
+export const useSystemLogs = (q: Query, enabled = true) =>
+  useQuery({ queryKey: queryKeys.systemLogs(q), queryFn: () => api.page<SystemLogEntry>("/logs", { query: q }), placeholderData: keepPreviousData, enabled });
+
+export const useAuditLogs = (q: Query, enabled = true) =>
+  useQuery({ queryKey: queryKeys.auditLogs(q), queryFn: () => api.page<AuditLogEntry>("/logs/audit", { query: q }), placeholderData: keepPreviousData, enabled });
+
+export const useUsers = (q: Query) =>
+  useQuery({ queryKey: queryKeys.users(q), queryFn: () => api.page<UserRow>("/users", { query: q }), placeholderData: keepPreviousData });
+
+export const useRoles = () => useQuery({ queryKey: queryKeys.roles, queryFn: () => api.get<Role[]>("/roles") });
+
+export const useUserSessions = (id: string | null) =>
+  useQuery({ queryKey: queryKeys.userSessions(id ?? ""), queryFn: () => api.get<UserSession[]>(`/users/${id}/sessions`), enabled: !!id });
+
+export const useSecuritySettings = () =>
+  useQuery({ queryKey: queryKeys.securitySettings, queryFn: () => api.get<SecuritySettings>("/settings/security") });

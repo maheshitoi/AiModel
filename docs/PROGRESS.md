@@ -124,6 +124,16 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
       socket auth and id-only events), 29 frontend (2026-11-04)
 - [ ] Visual check in the browser: the backend on :4000 is still the pre-Phase-12 build (restart `npm run dev:backend`)
 ## Phase 13 – Logs, usage, analytics
+- [x] `GET /usage`: AI requests, success rate, avg/p95 latency, tokens, per-model counts, decision outcomes
+      (automatic/approved/edited/dismissed/pending) and reasons, delivery by status and failure code, daily series in the system timezone
+- [x] `GET /messages`: message explorer with filters and text search; `GET /users/:id/sessions` login history
+- [x] Log retention job: deletes system logs older than `system.logRetentionDays` daily (audit logs are kept)
+- [x] Pages: Usage (KPIs, requests and latency charts with table view, outcome/reason/delivery bar lists, by model),
+      Messages, System logs + audit trail (filters, expandable details), Users & security (users, roles, password reset,
+      deactivation, login history, sign-in policy)
+- [x] Tests: 66 backend unit, 35 DB integration (4 new: usage numbers, timezone buckets, explorer, retention), 35 frontend;
+      screenshots light/dark/mobile against the new backend build (2026-11-04)
+- [ ] The backend on :4000 is still an old build: restart `npm run dev:backend` to use Phases 12–13
 ## Phase 14 – Training & model management UI
 ## Phase 15 – Integration testing
 ## Phase 16 – Production deployment

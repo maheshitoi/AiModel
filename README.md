@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 12 complete (live inbox)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **Phase 13 complete (logs, usage, analytics)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 > The model itself still fails on emergencies and unfamiliar requests. The inference service puts
 > safety rules, reply checks and a confidence gate around it ([docs/inference.md](docs/inference.md)).
 > It still sends 3 wrong (not dangerous) replies out of 22 test prompts, so keep auto-reply off.
@@ -140,6 +140,7 @@ require `Authorization: Bearer <accessToken>` unless noted.
 | AI | `GET /ai/status`, `GET /ai/checkpoints` (`models:read`), `POST /ai/models/activate` (`models:manage`), `POST /ai/test`, `GET /ai/decisions`, `POST /ai/decisions/:id/approve\|dismiss` (`conversations:*`). See [docs/ai-integration.md](docs/ai-integration.md) |
 | WhatsApp | `GET /whatsapp/accounts` (`settings:read`), `POST /whatsapp/accounts`, `PATCH /whatsapp/accounts/:id`, `POST /whatsapp/accounts/:id/verify` (`whatsapp:manage`); webhook `GET/POST /webhooks/whatsapp` (public, signature-checked). See [docs/whatsapp.md](docs/whatsapp.md) |
 | Inbox | `GET /conversations`, `GET /conversations/:id`, `GET /conversations/:id/messages`, `POST /conversations/:id/read` (`conversations:read`), `PATCH /conversations/:id` (`conversations:manage`), `POST /conversations/:id/messages`, `POST …/messages/:messageId/retry` (`conversations:reply`); live updates over Socket.IO. See [docs/inbox.md](docs/inbox.md) |
+| Analytics | `GET /usage?days=7\|30\|90` (`usage:read`), `GET /messages` (`messages:read`, filters: direction, source, status, type, text, dates), `GET /users/:id/sessions` (`users:manage`) |
 | Health | `GET /health` (public) |
 
 The AI service (`:8000`) has its own internal API, which only the backend calls with
