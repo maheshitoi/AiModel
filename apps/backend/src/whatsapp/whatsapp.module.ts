@@ -11,5 +11,7 @@ import { WhatsAppAccountsService } from './whatsapp-accounts.service';
   imports: [AiModule],
   controllers: [WhatsAppAccountsController, WhatsAppWebhookController],
   providers: [CredentialCipher, GraphApiClient, WhatsAppAccountsService, WhatsAppWebhookService, MessageSenderService],
+  // The inbox queues staff replies and wakes the sender.
+  exports: [MessageSenderService],
 })
 export class WhatsAppModule {}

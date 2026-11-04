@@ -114,6 +114,15 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
 - [ ] Not yet run against Meta's real servers (needs your app credentials; see [whatsapp.md](whatsapp.md))
 - [ ] Full `npm run test:db` (with reset) to be run by the user
 ## Phase 12 – Live inbox
+- [x] Conversations API: filtered/searchable list, detail with pending suggestion and 24-hour window, paged messages,
+      mark read, take over / hand back / close / resolve (audited), staff replies (window-checked; dismiss pending
+      suggestions; audit without text), retry failed messages
+- [x] Socket.IO live updates: token-authenticated, `conversations:read` only, closed at token expiry, id-only events
+- [x] Inbox page: list with tabs/search/badges, thread with delivery ticks and retry, attention banner, suggestion
+      approve/edit/dismiss, composer, mobile list/thread views, live indicator
+- [x] Tests: 66 backend unit, 31 DB integration (9 new: filters, paging, replies, 24 h rule, retry, staff actions,
+      socket auth and id-only events), 29 frontend (2026-11-04)
+- [ ] Visual check in the browser: the backend on :4000 is still the pre-Phase-12 build (restart `npm run dev:backend`)
 ## Phase 13 – Logs, usage, analytics
 ## Phase 14 – Training & model management UI
 ## Phase 15 – Integration testing

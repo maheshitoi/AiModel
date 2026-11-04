@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Message } from '@prisma/client';
 import { SystemLogService } from '../logs/system-log.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { GraphApiClient, GraphApiError } from './graph-api.client';
 import { WhatsAppAccountsService } from './whatsapp-accounts.service';
 
@@ -35,6 +36,7 @@ export class MessageSenderService implements OnApplicationBootstrap, OnModuleDes
     private readonly accounts: WhatsAppAccountsService,
     private readonly logs: SystemLogService,
     private readonly config: ConfigService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -75,6 +77,7 @@ export class MessageSenderService implements OnApplicationBootstrap, OnModuleDes
         const { count } = await this.prisma.message.updateMany({ where: { id: message.id, status: 'QUEUED' }, data: { status: 'SENDING' } });
         if (count === 1) {
           await this.send(message, now);
+          this.realtime.message(message.conversationId, message.id);
           sent++;
         }
       }
@@ -128,6 +131,8 @@ export class MessageSenderService implements OnApplicationBootstrap, OnModuleDes
       this.prisma.conversation.update({ where: { id: message.conversationId }, data: { needsAttention: true, attentionReason: 'delivery_failed' } }),
     ]);
     await this.logs.warn('WHATSAPP', 'whatsapp.send_failed', text, { code, retryCount: message.retryCount }, { conversationId: message.conversationId, messageId: message.id });
+    this.realtime.message(message.conversationId, message.id);
+    this.realtime.conversation(message.conversationId);
   }
 
   private async failStuck(now: Date): Promise<void> {

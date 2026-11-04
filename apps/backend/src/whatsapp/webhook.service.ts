@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { AiReplyService } from '../ai/ai-reply.service';
 import { SystemLogService } from '../logs/system-log.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { MessageSenderService } from './message-sender.service';
 import type { ChangeValue, InboundMessage, StatusUpdate, WebhookPayload } from './webhook.types';
 import { WhatsAppAccountsService } from './whatsapp-accounts.service';
@@ -74,6 +75,7 @@ export class WhatsAppWebhookService {
     private readonly replies: AiReplyService,
     private readonly sender: MessageSenderService,
     private readonly logs: SystemLogService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   /** GET verification: Meta echoes the verify token configured in the app dashboard. */
@@ -119,6 +121,8 @@ export class WhatsAppWebhookService {
         const stored = await this.storeInbound(account, value, m);
         if (stored) {
           messages++;
+          this.realtime.message(stored.conversationId, stored.id);
+          this.realtime.conversation(stored.conversationId);
           if (stored.type === 'TEXT') toAnswer.push(stored.id);
         }
       }
@@ -208,6 +212,7 @@ export class WhatsAppWebhookService {
         where: { id: message.id },
         data: { status, ...(status === 'FAILED' && { errorCode, errorMessage }) },
       });
+      this.realtime.message(message.conversationId, message.id);
     }
     if (status === 'FAILED' && advances) {
       await this.prisma.conversation.update({ where: { id: message.conversationId }, data: { needsAttention: true, attentionReason: 'delivery_failed' } });

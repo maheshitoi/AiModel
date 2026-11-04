@@ -4,6 +4,7 @@ import type { AuthUser, RequestMeta } from '../common/auth.types';
 import { AuditService } from '../logs/audit.service';
 import { SystemLogService } from '../logs/system-log.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import type { SettingValue } from '../settings/settings.dto';
 import { SettingsService } from '../settings/settings.service';
 import { AiChatMessage, AiClientService, AiGenerateResponse, AiServiceError } from './ai-client.service';
@@ -42,6 +43,7 @@ export class AiReplyService {
     private readonly settings: SettingsService,
     private readonly logs: SystemLogService,
     private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   /**
@@ -93,7 +95,7 @@ export class AiReplyService {
     const send = shouldSendAutomatically(res, convo.whatsAppAccount.autoReplyEnabled, gen);
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const decision = await this.prisma.$transaction(async (tx) => {
         let decision = await tx.aIDecision.create({
           data: {
             conversationId: convo.id,
@@ -131,6 +133,8 @@ export class AiReplyService {
         }
         return decision;
       });
+      this.announce(decision);
+      return decision;
     } catch (error) {
       // A concurrent call for the same message won the race; its decision stands.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -142,7 +146,7 @@ export class AiReplyService {
 
   /** Staff approve a suggestion, optionally edited. An edited reply is recorded as written by them. */
   async approve(decisionId: string, text: string | undefined, actor: AuthUser, meta: RequestMeta): Promise<AIDecision> {
-    return this.prisma.$transaction(async (tx) => {
+    const approved = await this.prisma.$transaction(async (tx) => {
       const decision = await this.claim(tx, decisionId, 'QUEUED', actor);
       const conversation = await tx.conversation.findUniqueOrThrow({ where: { id: decision.conversationId } });
       if (conversation.status === 'CLOSED') throw new ConflictException('The conversation is closed');
@@ -154,14 +158,25 @@ export class AiReplyService {
       );
       return tx.aIDecision.findUniqueOrThrow({ where: { id: decision.id } });
     });
+    this.announce(approved);
+    return approved;
   }
 
   async dismiss(decisionId: string, actor: AuthUser, meta: RequestMeta): Promise<AIDecision> {
-    return this.prisma.$transaction(async (tx) => {
+    const dismissed = await this.prisma.$transaction(async (tx) => {
       const decision = await this.claim(tx, decisionId, 'DISMISSED', actor);
       await this.audit.record({ actorId: actor.id, action: 'ai_decision.dismiss', entityType: 'AIDecision', entityId: decision.id, meta }, tx);
       return decision;
     });
+    this.announce(dismissed);
+    return dismissed;
+  }
+
+  /** Tells live inbox clients what changed (ids only). */
+  private announce(decision: AIDecision): void {
+    this.realtime.decision(decision.conversationId, decision.id);
+    this.realtime.conversation(decision.conversationId);
+    if (decision.outboundMessageId) this.realtime.message(decision.conversationId, decision.outboundMessageId);
   }
 
   /** Runs the AI on a made-up conversation (dashboard playground). Only usage is recorded. */
@@ -242,5 +257,6 @@ export class AiReplyService {
     });
     await this.prisma.conversation.update({ where: { id: convo.id }, data: { needsAttention: true, attentionReason: 'ai_unavailable' } });
     await this.logs.warn('AI', 'ai.request_failed', message, { kind }, { conversationId: convo.id, messageId });
+    this.realtime.conversation(convo.id);
   }
 }

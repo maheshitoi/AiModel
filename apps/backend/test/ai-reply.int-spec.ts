@@ -11,6 +11,7 @@ import { seedDatabase } from '../src/database/seed';
 import { AuditService } from '../src/logs/audit.service';
 import { SystemLogService } from '../src/logs/system-log.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { RealtimeService } from '../src/realtime/realtime.service';
 import { LEGACY_DEFAULTS, SETTING_DEFAULTS } from '../src/settings/settings.defaults';
 import { SettingsService } from '../src/settings/settings.service';
 import { getTestDatabaseUrl } from './test-database';
@@ -87,7 +88,7 @@ beforeAll(async () => {
   const logs = new SystemLogService(prisma);
   const client = new AiClientService(config);
   const registry = new ModelRegistryService(prisma, client, audit, logs);
-  replies = new AiReplyService(prisma, client, registry, new SettingsService(prisma, audit), logs, audit);
+  replies = new AiReplyService(prisma, client, registry, new SettingsService(prisma, audit), logs, audit, new RealtimeService());
 
   const role = await prisma.role.findUniqueOrThrow({ where: { name: 'OPERATOR' } });
   const user = await prisma.user.create({ data: { email: `op-${Date.now()}@test.local`, name: 'Operator', passwordHash: 'x', roleId: role.id } });

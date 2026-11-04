@@ -27,6 +27,8 @@ export const session = {
   setAccessToken: (token: string | null) => {
     accessToken = token;
   },
+  /** For the live-inbox socket handshake only; HTTP requests attach it themselves. */
+  getAccessToken: () => accessToken,
   onExpired: (handler: (() => void) | null) => {
     onSessionExpired = handler;
   },

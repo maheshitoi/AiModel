@@ -28,7 +28,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Monitor",
     items: [
       { href: "/", label: "Overview", icon: LayoutDashboard, permission: "dashboard:read" },
-      { href: "/inbox", label: "Inbox", icon: MessageCircle, permission: "conversations:read", phase: 12 },
+      { href: "/inbox", label: "Inbox", icon: MessageCircle, permission: "conversations:read" },
       { href: "/messages", label: "Messages", icon: MessagesSquare, permission: "messages:read", phase: 13 },
     ],
   },

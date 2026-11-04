@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { join } from 'node:path';
 import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
+import { ConversationsModule } from './conversations/conversations.module';
 import { JwtAuthGuard, PermissionsGuard } from './auth/guards';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { ResponseInterceptor } from './common/response.interceptor';
@@ -13,6 +14,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
 import { LogsModule } from './logs/logs.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
@@ -35,6 +37,8 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     DashboardModule,
     AiModule,
     WhatsAppModule,
+    ConversationsModule,
+    RealtimeModule,
     HealthModule,
   ],
   providers: [
