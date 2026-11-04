@@ -15,6 +15,7 @@ import { LogsModule } from './logs/logs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     DashboardModule,
     AiModule,
+    WhatsAppModule,
     HealthModule,
   ],
   providers: [

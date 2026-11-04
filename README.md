@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 10 complete (backend ↔ AI service integration)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **Phase 11 complete (WhatsApp Cloud API integration)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 > The model itself still fails on emergencies and unfamiliar requests. The inference service puts
 > safety rules, reply checks and a confidence gate around it ([docs/inference.md](docs/inference.md)).
 > It still sends 3 wrong (not dangerous) replies out of 22 test prompts, so keep auto-reply off.
@@ -138,6 +138,7 @@ require `Authorization: Bearer <accessToken>` unless noted.
 | Logs | `GET /logs` (`logs:read`), `GET /logs/audit` (`audit:read`) |
 | Dashboard | `GET /dashboard/overview`, `GET /dashboard/messages-chart?range=daily\|weekly\|monthly` (`dashboard:read`) |
 | AI | `GET /ai/status`, `GET /ai/checkpoints` (`models:read`), `POST /ai/models/activate` (`models:manage`), `POST /ai/test`, `GET /ai/decisions`, `POST /ai/decisions/:id/approve\|dismiss` (`conversations:*`). See [docs/ai-integration.md](docs/ai-integration.md) |
+| WhatsApp | `GET /whatsapp/accounts` (`settings:read`), `POST /whatsapp/accounts`, `PATCH /whatsapp/accounts/:id`, `POST /whatsapp/accounts/:id/verify` (`whatsapp:manage`); webhook `GET/POST /webhooks/whatsapp` (public, signature-checked). See [docs/whatsapp.md](docs/whatsapp.md) |
 | Health | `GET /health` (public) |
 
 The AI service (`:8000`) has its own internal API, which only the backend calls with
@@ -172,7 +173,8 @@ npm run test:ai                                                 # inference serv
 ## Security notes
 
 - Secrets live only in `.env` (git-ignored). Never commit real credentials.
-- WhatsApp access tokens are never returned by the API or shipped to the browser.
+- WhatsApp credentials are encrypted at rest (AES-256-GCM, `CREDENTIALS_ENCRYPTION_KEY`), never returned by the API
+  or shipped to the browser. Webhooks must carry a valid Meta signature.
 - No pretrained weights and no hosted LLM APIs are used for response generation.
 - The AI service accepts `/v1` requests only with `AI_SERVICE_TOKEN`, binds to localhost by default,
   and never logs message text. Validation errors don't echo the submitted text either.

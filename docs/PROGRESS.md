@@ -101,6 +101,18 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
 - [ ] Full `npm run test:db` (with its database reset) to be run by the user: Prisma blocks the AI agent from resetting
 - [x] Documented in [ai-integration.md](ai-integration.md)
 ## Phase 11 – WhatsApp Cloud API integration
+- [x] Migration `whatsapp_sending`: `SENDING` status, `nextAttemptAt`
+- [x] AES-256-GCM credential encryption (`CREDENTIALS_ENCRYPTION_KEY`); accounts API never returns credentials; audited
+- [x] Account management + credential verification against the Graph API; `whatsapp:manage` permission
+- [x] Webhook: GET verification, POST with raw-body HMAC signature check; idempotent message and status storage;
+      all inbound types mapped; out-of-order statuses handled; AI triggered after acknowledging
+- [x] Sender: atomic claim (no double sends), 24-hour window rule, retry with backoff, auth failures mark the account
+- [x] Frontend: WhatsApp settings page (connect/edit/verify/disable, auto-reply with confirmation, webhook URL)
+- [x] Frontend: AI settings page (overdue from Phase 10): model status/activation, generation settings, playground
+- [x] Tests: 66 backend unit, 22 DB integration (incl. end-to-end webhook → AI → send → statuses against fake
+      Graph/AI servers, run without a reset), 20 frontend; screenshots light/dark/mobile (2026-11-04)
+- [ ] Not yet run against Meta's real servers (needs your app credentials; see [whatsapp.md](whatsapp.md))
+- [ ] Full `npm run test:db` (with reset) to be run by the user
 ## Phase 12 – Live inbox
 ## Phase 13 – Logs, usage, analytics
 ## Phase 14 – Training & model management UI

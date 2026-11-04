@@ -81,6 +81,8 @@ beforeAll(async () => {
   const config = { getOrThrow: (k: string) => values[k], get: (k: string) => values[k] } as unknown as ConfigService;
 
   await seedDatabase(prisma);
+  // Start from the default generation settings even if a previous run left others behind.
+  await prisma.systemSetting.update({ where: { key: 'ai.generation' }, data: { value: SETTING_DEFAULTS['ai.generation'].value as object } });
   const audit = new AuditService(prisma);
   const logs = new SystemLogService(prisma);
   const client = new AiClientService(config);

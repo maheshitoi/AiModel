@@ -1,5 +1,30 @@
 import { plainToInstance } from 'class-transformer';
-import { IsIn, IsInt, IsString, IsUrl, Max, Min, MinLength, validateSync } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsString,
+  IsUrl,
+  Matches,
+  Max,
+  Min,
+  MinLength,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  validateSync,
+} from 'class-validator';
+import { decodeKey } from '../common/credential-cipher';
+
+@ValidatorConstraint({ name: 'aes256Key' })
+class IsAes256Key implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    return typeof value === 'string' && decodeKey(value) !== null;
+  }
+  defaultMessage(args: ValidationArguments): string {
+    return `${args.property} must be 32 random bytes, base64-encoded`;
+  }
+}
 
 class EnvironmentVariables {
   @IsIn(['development', 'test', 'production'])
@@ -28,6 +53,22 @@ class EnvironmentVariables {
   @Min(1000)
   @Max(120_000)
   AI_REQUEST_TIMEOUT_MS: number = 15_000;
+
+  // Encrypts WhatsApp credentials at rest. Changing it makes stored credentials unreadable.
+  @Validate(IsAes256Key)
+  CREDENTIALS_ENCRYPTION_KEY: string;
+
+  @IsUrl({ require_tld: false })
+  WHATSAPP_GRAPH_URL: string = 'https://graph.facebook.com';
+
+  @Matches(/^v\d+\.\d+$/)
+  WHATSAPP_GRAPH_VERSION: string = 'v23.0';
+
+  /** How often the sender looks for queued outbound messages; 0 disables it. */
+  @IsInt()
+  @Min(0)
+  @Max(60_000)
+  WHATSAPP_SENDER_INTERVAL_MS: number = 2000;
 
   @IsString()
   @MinLength(32)

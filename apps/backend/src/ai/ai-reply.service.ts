@@ -60,8 +60,13 @@ export class AiReplyService {
     if (inbound.direction !== 'INBOUND' || inbound.type !== 'TEXT' || !inbound.body?.trim()) return null;
     if (!convo.aiEnabled || convo.status !== 'OPEN') return null;
     // Customers often send several short messages; answer the latest, with the others as context.
+    // WhatsApp timestamps have 1 s resolution, so ties are broken by id (UUIDv7: insertion order).
     const newer = await this.prisma.message.count({
-      where: { conversationId: convo.id, direction: 'INBOUND', occurredAt: { gt: inbound.occurredAt } },
+      where: {
+        conversationId: convo.id,
+        direction: 'INBOUND',
+        OR: [{ occurredAt: { gt: inbound.occurredAt } }, { occurredAt: inbound.occurredAt, id: { gt: inbound.id } }],
+      },
     });
     if (newer > 0) return null;
 

@@ -172,6 +172,7 @@ enum MessageSource {
 enum MessageStatus {
   RECEIVED // inbound
   QUEUED // outbound, waiting to be sent
+  SENDING // outbound, claimed by the sender (never retried automatically: it may have been delivered)
   SENT
   DELIVERED
   READ
@@ -198,6 +199,7 @@ model Message {
   errorCode      String?
   errorMessage   String?
   retryCount     Int              @default(0)
+  nextAttemptAt  DateTime? // outbound retry after a temporary failure
   // When WhatsApp says the event happened (inbound) or when we sent it (outbound).
   occurredAt     DateTime         @default(now())
   createdAt      DateTime         @default(now())
@@ -216,6 +218,7 @@ model Message {
   @@index([occurredAt(sort: Desc)])
   @@index([status, occurredAt(sort: Desc)])
   @@index([direction, source, occurredAt(sort: Desc)])
+  @@index([status, nextAttemptAt])
 }
 
 model MessageStatusHistory {

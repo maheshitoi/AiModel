@@ -50,8 +50,8 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Settings",
     items: [
-      { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone, permission: "settings:read", phase: 11 },
-      { href: "/settings/ai", label: "AI settings", icon: SlidersHorizontal, permission: "settings:read", phase: 10 },
+      { href: "/settings/whatsapp", label: "WhatsApp", icon: Phone, permission: "settings:read" },
+      { href: "/settings/ai", label: "AI settings", icon: SlidersHorizontal, permission: "settings:read" },
       { href: "/users", label: "Users & security", icon: Users, permission: "users:manage", phase: 13 },
     ],
   },

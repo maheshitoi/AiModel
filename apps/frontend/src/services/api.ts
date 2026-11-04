@@ -1,6 +1,6 @@
 import type { PageMeta } from "@/types/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
 // Mirrors the backend's ResponseInterceptor / AllExceptionsFilter envelope.
 type ApiEnvelope<T> =

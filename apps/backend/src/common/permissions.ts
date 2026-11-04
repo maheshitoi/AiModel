@@ -17,6 +17,7 @@ export const Permission = {
   DatasetsManage: 'datasets:manage',
   SettingsRead: 'settings:read',
   SettingsManage: 'settings:manage',
+  WhatsAppManage: 'whatsapp:manage',
   UsersManage: 'users:manage',
 } as const;
 

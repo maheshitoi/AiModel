@@ -74,3 +74,77 @@ export interface MessageChartPoint {
   outbound: number;
   ai: number;
 }
+
+// ── AI (apps/backend/src/ai) ────────────────────────────────────────────────
+export interface AiModelInfo {
+  name: string;
+  checkpoint: string;
+  parameters: number;
+  context_length: number;
+  vocab_size: number;
+  step: number | null;
+  best_val_loss: number | null;
+  facts_source: "run" | "default";
+  business_name: string;
+  loaded_at: string;
+}
+
+export interface AiStatus {
+  reachable: boolean;
+  error?: string;
+  loaded: boolean;
+  model: AiModelInfo | null;
+  lastLoadError: string | null;
+  activeVersion: { id: string; version: number; checkpointPath: string | null; activatedAt: string | null } | null;
+  inSync: boolean;
+}
+
+export interface AiCheckpoint {
+  checkpoint: string;
+  size_bytes: number;
+  modified_at: string;
+}
+
+export interface AiDecisionResult {
+  action: "reply" | "fallback" | "handoff";
+  text: string;
+  reason: string;
+  detail: string | null;
+  handoff_required: boolean;
+  confidence: number | null;
+  model_text: string | null;
+  usage: { input_tokens: number; output_tokens: number };
+  latency_ms: number;
+}
+
+// Mirrors AiGenerationSettingsDto (apps/backend/src/settings/settings.dto.ts).
+export interface AiGenerationSettings {
+  systemInstructions: string;
+  maxNewTokens: number;
+  temperature: number;
+  topK: number;
+  topP: number;
+  maxContextTokens: number;
+  fallbackReply: string;
+  minConfidence: number;
+  historyMessages: number;
+  sendSafetyRepliesImmediately: boolean;
+}
+
+// ── WhatsApp (apps/backend/src/whatsapp) ────────────────────────────────────
+export type WhatsAppAccountStatus = "PENDING" | "CONNECTED" | "ERROR" | "DISABLED";
+
+/** Credentials are never sent to the browser; only the token's last 4 characters. */
+export interface WhatsAppAccount {
+  id: string;
+  displayName: string;
+  phoneNumber: string;
+  phoneNumberId: string;
+  businessAccountId: string;
+  accessTokenLast4: string;
+  status: WhatsAppAccountStatus;
+  autoReplyEnabled: boolean;
+  lastVerifiedAt: string | null;
+  lastWebhookAt: string | null;
+  createdAt: string;
+}
