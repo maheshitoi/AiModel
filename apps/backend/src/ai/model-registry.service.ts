@@ -1,11 +1,21 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ConflictException, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { ModelVersionStatus, Prisma } from '@prisma/client';
 import type { AuthUser, RequestMeta } from '../common/auth.types';
 import { DEFAULT_MODEL_NAME } from '../database/seed';
 import { AuditService } from '../logs/audit.service';
 import { SystemLogService } from '../logs/system-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiClientService, AiModelInfo } from './ai-client.service';
+
+export interface VersionFields {
+  checkpoint: string;
+  parameters: number;
+  vocabSize: number;
+  contextLength: number;
+  config: Prisma.InputJsonValue;
+  status: ModelVersionStatus;
+  trainedAt?: Date;
+}
 
 /**
  * Keeps ModelVersion rows in step with what the AI service has loaded.
@@ -35,12 +45,25 @@ export class ModelRegistryService implements OnApplicationBootstrap {
     const cached = this.versionIds.get(info.checkpoint);
     if (cached) return cached;
     const existing = await this.prisma.modelVersion.findUnique({ where: { checkpointPath: info.checkpoint } });
-    const id = existing?.id ?? (await this.create(info));
+    const id =
+      existing?.id ??
+      (await this.register({
+        checkpoint: info.checkpoint,
+        parameters: info.parameters,
+        vocabSize: info.vocab_size,
+        contextLength: info.context_length,
+        config: info as unknown as Prisma.InputJsonValue,
+        status: 'READY',
+      }));
     this.versionIds.set(info.checkpoint, id);
     return id;
   }
 
   async activate(checkpoint: string, actor: AuthUser, meta: RequestMeta) {
+    const known = await this.prisma.modelVersion.findUnique({ where: { checkpointPath: checkpoint }, select: { status: true } });
+    if (known && known.status !== 'READY') {
+      throw new ConflictException(known.status === 'TRAINING' ? 'This version is still training' : `This version is ${known.status.toLowerCase()} and can't be activated`);
+    }
     const info = await this.ai.loadModel(checkpoint);
     const versionId = await this.versionFor(info);
     return this.prisma.$transaction(async (tx) => {
@@ -76,33 +99,42 @@ export class ModelRegistryService implements OnApplicationBootstrap {
     }
   }
 
-  private async create(info: AiModelInfo): Promise<string> {
+  /** The platform's single AIModel (versions and training jobs hang off it). */
+  async defaultModelId(): Promise<string> {
     const model = await this.prisma.aIModel.upsert({
       where: { name: DEFAULT_MODEL_NAME },
       create: { name: DEFAULT_MODEL_NAME, description: 'GPT-style decoder trained from scratch' },
       update: {},
     });
+    return model.id;
+  }
+
+  /** Creates a ModelVersion with the next version number (or returns the one already registered for the checkpoint). */
+  async register(fields: VersionFields): Promise<string> {
+    const modelId = await this.defaultModelId();
     for (let attempt = 0; ; attempt++) {
       try {
-        const last = await this.prisma.modelVersion.findFirst({ where: { modelId: model.id }, orderBy: { version: 'desc' } });
+        const last = await this.prisma.modelVersion.findFirst({ where: { modelId }, orderBy: { version: 'desc' } });
         const created = await this.prisma.modelVersion.create({
           data: {
-            modelId: model.id,
+            modelId,
             version: (last?.version ?? 0) + 1,
-            status: 'READY',
-            config: info as unknown as Prisma.InputJsonValue,
-            parameterCount: info.parameters,
-            vocabSize: info.vocab_size,
-            contextLength: info.context_length,
-            checkpointPath: info.checkpoint,
-            tokenizerPath: `${info.checkpoint.split('/').slice(0, -1).join('/')}/tokenizer.json`,
+            status: fields.status,
+            config: fields.config,
+            parameterCount: fields.parameters,
+            vocabSize: fields.vocabSize,
+            contextLength: fields.contextLength,
+            checkpointPath: fields.checkpoint,
+            tokenizerPath: `${fields.checkpoint.split('/').slice(0, -1).join('/')}/tokenizer.json`,
+            trainedAt: fields.trainedAt,
           },
         });
+        this.versionIds.set(fields.checkpoint, created.id);
         return created.id;
       } catch (error) {
         // Another request registered the same checkpoint, or took the next version number, first.
         if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') || attempt >= 2) throw error;
-        const again = await this.prisma.modelVersion.findUnique({ where: { checkpointPath: info.checkpoint } });
+        const again = await this.prisma.modelVersion.findUnique({ where: { checkpointPath: fields.checkpoint } });
         if (again) return again.id;
       }
     }

@@ -135,5 +135,17 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
       screenshots light/dark/mobile against the new backend build (2026-11-04)
 - [ ] The backend on :4000 is still an old build: restart `npm run dev:backend` to use Phases 12–13
 ## Phase 14 – Training & model management UI
+- [x] AI service: dataset store (upload, validate, cleaned preview, delete), training jobs run as separate processes
+      (`training.pipeline`: dataset build + train per run), safe stop, dead-process detection, evaluations; state in run files
+- [x] Migrations `training_jobs` (run name, device) and `dataset_stats`
+- [x] Backend: Datasets API (versions, duplicate-file check, validate → approve → activate, explicit review for customer data,
+      audited previews, export from conversations, archive instead of delete when used), Training API (presets, start/stop,
+      history, metrics mirrored by a poller), Models API (versions, evaluate, activate; versions still training can't be activated)
+- [x] Socket.IO `training` room (`training:read`); inbox room unchanged (`conversations:read`)
+- [x] Pages: Datasets (upload, from conversations, review/preview/approve, activate switch, archive/delete), Training (live job
+      card, loss and learning-rate charts with table view, history, start/stop), Models (summary, serving model, versions, evaluation report, activation)
+- [x] Tests: AI service 105 (8 new, real tiny training/stop/evaluation processes), backend 66 unit + 48 DB integration
+      (11 new), frontend 44 (9 new); real end-to-end run through the dashboard stack (2026-11-04, see [training-dashboard.md](training-dashboard.md))
+- [ ] `database.int-spec.ts` needs a reset database: run `npm run test:db` yourself
 ## Phase 15 – Integration testing
 ## Phase 16 – Production deployment

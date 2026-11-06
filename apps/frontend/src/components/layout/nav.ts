@@ -35,9 +35,9 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "AI",
     items: [
-      { href: "/models", label: "Models", icon: Brain, permission: "models:read", phase: 14 },
-      { href: "/training", label: "Training", icon: Activity, permission: "training:read", phase: 14 },
-      { href: "/datasets", label: "Datasets", icon: Database, permission: "datasets:read", phase: 14 },
+      { href: "/models", label: "Models", icon: Brain, permission: "models:read" },
+      { href: "/training", label: "Training", icon: Activity, permission: "training:read" },
+      { href: "/datasets", label: "Datasets", icon: Database, permission: "datasets:read" },
     ],
   },
   {

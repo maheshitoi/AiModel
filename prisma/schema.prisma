@@ -361,6 +361,8 @@ model TrainingDataset {
   duplicateCount       Int           @default(0)
   validationSplit      Float         @default(0.1)
   validationErrors     Json?
+  // Last validation report: valid/unique records, duplicates, train/validation split, intents.
+  stats                Json?
   status               DatasetStatus @default(UPLOADED)
   isActive             Boolean       @default(false)
   // Datasets derived from real customer messages must be flagged and explicitly approved.
@@ -395,6 +397,9 @@ model TrainingJob {
   // The version this job produces; set when the job starts.
   modelVersionId String?           @unique @db.Uuid
   status         TrainingJobStatus @default(QUEUED)
+  // Run directory under CHECKPOINT_DIR, assigned by the AI service when the job starts.
+  runName        String?           @unique
+  device         String?
   config         Json
   currentStep    Int               @default(0)
   totalSteps     Int

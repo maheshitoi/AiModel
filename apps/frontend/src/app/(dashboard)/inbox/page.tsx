@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/common/states";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { ConversationThread } from "@/components/inbox/conversation-thread";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useInboxSocket, type LiveState } from "@/hooks/use-inbox-socket";
+import { useInboxSocket, type LiveState } from "@/hooks/use-live-updates";
 import { cn } from "@/lib/utils";
 import type { InboxFilter } from "@/types/api";
 

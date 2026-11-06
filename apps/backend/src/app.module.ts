@@ -17,6 +17,7 @@ import { LogsModule } from './logs/logs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { SettingsModule } from './settings/settings.module';
+import { TrainingModule } from './training/training.module';
 import { UsersModule } from './users/users.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 
@@ -41,6 +42,7 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
     ConversationsModule,
     RealtimeModule,
     AnalyticsModule,
+    TrainingModule,
     HealthModule,
   ],
   providers: [

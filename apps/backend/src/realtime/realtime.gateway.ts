@@ -4,12 +4,13 @@ import { OnGatewayConnection, OnGatewayInit, WebSocketGateway } from '@nestjs/we
 import type { Server, Socket } from 'socket.io';
 import { AuthService } from '../auth/auth.service';
 import { hasPermissions, Permission } from '../common/permissions';
-import { INBOX_ROOM, RealtimeService } from './realtime.service';
+import { INBOX_ROOM, RealtimeService, TRAINING_ROOM } from './realtime.service';
 
 const allowedOrigins = () => (process.env.CORS_ORIGINS ?? 'http://localhost:3000').split(',').map((o) => o.trim());
 
 /**
- * Socket.IO endpoint for the live inbox (path /socket.io). Clients authenticate with their access
+ * Socket.IO endpoint for the live inbox and training pages (path /socket.io). Each user joins only
+ * the rooms their permissions allow. Clients authenticate with their access
  * token in the handshake (`auth: { token }`). The socket is closed when that token expires, so the
  * client reconnects with a refreshed one and a revoked session cannot keep listening.
  */
@@ -34,11 +35,15 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     try {
       if (typeof token !== 'string' || !token) throw new Error('missing token');
       const user = await this.auth.authenticate(token);
-      if (!hasPermissions(user.permissions, [Permission.ConversationsRead])) throw new Error('forbidden');
+      const rooms = [
+        ...(hasPermissions(user.permissions, [Permission.ConversationsRead]) ? [INBOX_ROOM] : []),
+        ...(hasPermissions(user.permissions, [Permission.TrainingRead]) ? [TRAINING_ROOM] : []),
+      ];
+      if (rooms.length === 0) throw new Error('forbidden');
       const { exp } = this.jwt.decode<{ exp: number }>(token);
       const timer = setTimeout(() => client.disconnect(true), Math.max(0, exp * 1000 - Date.now()));
       client.once('disconnect', () => clearTimeout(timer));
-      await client.join(INBOX_ROOM);
+      await client.join(rooms);
     } catch (error) {
       this.logger.debug(`Rejected socket: ${(error as Error).message}`);
       client.emit('auth_error', 'unauthorized');

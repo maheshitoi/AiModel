@@ -77,3 +77,23 @@ class CheckpointFile(BaseModel):
     checkpoint: str
     size_bytes: int
     modified_at: str
+
+
+# ── datasets, training, evaluation (Phase 14) ────────────────────────────────
+JobId = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+
+
+class StartTrainingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: JobId = Field(description="chosen by the backend (its TrainingJob id)")
+    preset: str = Field(min_length=1, max_length=100, description="name of a config in ai-model/config/")
+    max_steps: int | None = Field(None, ge=1, le=1_000_000, description="overrides the preset's training.max_steps")
+    include_synthetic: bool = True
+    dataset_ids: list[JobId] = Field(default_factory=list, max_length=50)
+
+
+class EvaluationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    checkpoint: str = Field(min_length=1, max_length=300)

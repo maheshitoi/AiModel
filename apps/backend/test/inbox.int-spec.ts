@@ -206,16 +206,13 @@ describe('staff actions', () => {
 });
 
 describe('live updates (Socket.IO)', () => {
-  it('rejects sockets without a valid token or without inbox access', async () => {
+  it('rejects sockets without a valid token', async () => {
     const none = await connect();
     expect(none.ok).toBe(false);
     none.socket.close();
     const bad = await connect('not-a-jwt');
     expect(bad.ok).toBe(false);
     bad.socket.close();
-    const viewer = await connect(viewerJwt);
-    expect(viewer.ok).toBe(false);
-    viewer.socket.close();
   });
 
   it('pushes id-only events when a customer message arrives', async () => {
@@ -223,6 +220,11 @@ describe('live updates (Socket.IO)', () => {
     expect(ok).toBe(true);
     const events: Record<string, string>[] = [];
     socket.on('inbox', (e: Record<string, string>) => events.push(e));
+    // Viewers may connect (for training updates) but are not in the inbox room.
+    const viewer = await connect(viewerJwt);
+    expect(viewer.ok).toBe(true);
+    const viewerEvents: unknown[] = [];
+    viewer.socket.on('inbox', (e: unknown) => viewerEvents.push(e));
 
     const raw = JSON.stringify({
       object: 'whatsapp_business_account',
@@ -245,6 +247,8 @@ describe('live updates (Socket.IO)', () => {
     await fetch(`${base}/webhooks/whatsapp`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Hub-Signature-256': signature }, body: raw });
     await new Promise((r) => setTimeout(r, 300));
     socket.close();
+    viewer.socket.close();
+    expect(viewerEvents).toEqual([]);
 
     const stored = await prisma.message.findUniqueOrThrow({ where: { waMessageId: `wamid.LIVE-${RUN}` } });
     expect(events).toEqual(

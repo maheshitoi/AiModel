@@ -65,10 +65,11 @@ async function send<T>(path: string, opts: RequestOptions, retried = false): Pro
     credentials: "include",
     signal: opts.signal,
     headers: {
-      ...(opts.body !== undefined && { "content-type": "application/json" }),
+      // FormData sets its own multipart content type (with the boundary).
+      ...(opts.body !== undefined && !(opts.body instanceof FormData) && { "content-type": "application/json" }),
       ...(accessToken && { authorization: `Bearer ${accessToken}` }),
     },
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body: opts.body instanceof FormData ? opts.body : opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
 
   // Expired access token: refresh once and replay. Auth endpoints never retry.
@@ -90,4 +91,5 @@ export const api = {
   post: <T>(path: string, body?: unknown) => send<T>(path, { method: "POST", body }).then((r) => r.data),
   patch: <T>(path: string, body?: unknown) => send<T>(path, { method: "PATCH", body }).then((r) => r.data),
   delete: <T>(path: string) => send<T>(path, { method: "DELETE" }).then((r) => r.data),
+  upload: <T>(path: string, form: FormData) => send<T>(path, { method: "POST", body: form }).then((r) => r.data),
 };

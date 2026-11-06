@@ -1,18 +1,4 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  NotFoundException,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Query,
-  Req,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
@@ -23,28 +9,9 @@ import { Permission } from '../common/permissions';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiClientService, AiServiceError } from './ai-client.service';
 import { AiReplyService } from './ai-reply.service';
+import { callAi } from './call-ai';
 import { ActivateModelDto, AiTestDto, ApproveDecisionDto, DecisionQueryDto } from './ai.dto';
 import { ModelRegistryService } from './model-registry.service';
-
-/** AI service failures become 503/502/4xx with the client's fixed messages, never upstream bodies. */
-async function callAi<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (!(error instanceof AiServiceError)) throw error;
-    switch (error.kind) {
-      case 'rejected':
-        throw new BadRequestException(error.message);
-      case 'not_found':
-        throw new NotFoundException(error.message);
-      case 'misconfigured':
-      case 'bad_response':
-        throw new BadGatewayException(error.message);
-      default:
-        throw new ServiceUnavailableException(error.message);
-    }
-  }
-}
 
 @ApiTags('ai')
 @ApiBearerAuth()

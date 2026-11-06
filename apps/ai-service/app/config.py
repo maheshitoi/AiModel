@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     ai_service_host: str = "127.0.0.1"
     ai_service_port: int = 8000
     checkpoint_dir: Path = Path("ai-model/checkpoints")
+    # Uploaded training datasets (one file per dataset, named by its id) and the training presets.
+    dataset_dir: Path = Path("ai-model/dataset/uploads")
+    training_presets_dir: Path = Path("ai-model/config")
+    training_default_preset: str = "tiny-cpu"
+    dataset_max_bytes: int = Field(20 * 2**20, ge=1024)
     # Shared secret the backend sends as X-Internal-Token. Without it, the /v1 routes refuse every request.
     ai_service_token: SecretStr | None = None
     # Checkpoint loaded at startup, relative to CHECKPOINT_DIR (e.g. tiny-cpu-v1/best.pt).
@@ -32,9 +37,21 @@ class Settings(BaseSettings):
             raise ValueError("AI_SERVICE_TOKEN must be at least 32 characters")
         return v
 
+    @staticmethod
+    def _from_root(path: Path) -> Path:
+        return path if path.is_absolute() else REPO_ROOT / path
+
     @property
     def checkpoint_path(self) -> Path:
-        return self.checkpoint_dir if self.checkpoint_dir.is_absolute() else REPO_ROOT / self.checkpoint_dir
+        return self._from_root(self.checkpoint_dir)
+
+    @property
+    def dataset_path(self) -> Path:
+        return self._from_root(self.dataset_dir)
+
+    @property
+    def presets_path(self) -> Path:
+        return self._from_root(self.training_presets_dir)
 
 
 @lru_cache

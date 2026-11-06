@@ -70,6 +70,12 @@ class EnvironmentVariables {
   @Max(60_000)
   WHATSAPP_SENDER_INTERVAL_MS: number = 2000;
 
+  /** How often running training jobs are synced from the AI service; 0 disables it. */
+  @IsInt()
+  @Min(0)
+  @Max(60_000)
+  TRAINING_POLL_INTERVAL_MS: number = 3000;
+
   @IsString()
   @MinLength(32)
   JWT_ACCESS_SECRET: string;

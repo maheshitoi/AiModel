@@ -4,6 +4,13 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { api } from "@/services/api";
 import type {
   AiCheckpoint,
+  AiModelRow,
+  DatasetPreview,
+  DatasetRow,
+  Evaluation,
+  TrainingJob,
+  TrainingMetricPoint,
+  TrainingPreset,
   AiGenerationSettings,
   AiStatus,
   ChartRange,
@@ -48,6 +55,16 @@ export const queryKeys = {
   roles: ["roles"] as const,
   userSessions: (id: string) => ["users", id, "sessions"] as const,
   securitySettings: ["settings", "security"] as const,
+  // Everything under "training" and "models" is refetched when the training socket reports a change.
+  datasets: (q: object) => ["datasets", q] as const,
+  datasetPreview: (id: string, offset: number) => ["datasets", id, "preview", offset] as const,
+  training: ["training"] as const,
+  trainingPresets: ["training", "presets"] as const,
+  trainingJobs: (q: object) => ["training", "jobs", q] as const,
+  currentJob: ["training", "current"] as const,
+  jobMetrics: (id: string) => ["training", "metrics", id] as const,
+  models: ["models"] as const,
+  evaluation: (versionId: string) => ["models", "evaluation", versionId] as const,
 };
 
 type Query = Record<string, string | number | boolean | undefined>;
@@ -126,3 +143,37 @@ export const useUserSessions = (id: string | null) =>
 
 export const useSecuritySettings = () =>
   useQuery({ queryKey: queryKeys.securitySettings, queryFn: () => api.get<SecuritySettings>("/settings/security") });
+
+export const useDatasets = (q: Query) =>
+  useQuery({ queryKey: queryKeys.datasets(q), queryFn: () => api.page<DatasetRow>("/datasets", { query: q }), placeholderData: keepPreviousData });
+
+export const useDatasetPreview = (id: string | null, offset: number, limit = 10) =>
+  useQuery({
+    queryKey: queryKeys.datasetPreview(id ?? "", offset),
+    queryFn: () => api.get<DatasetPreview>(`/datasets/${id}/preview`, { query: { offset, limit } }),
+    enabled: !!id,
+    placeholderData: keepPreviousData,
+  });
+
+export const useTrainingPresets = (enabled = true) =>
+  useQuery({ queryKey: queryKeys.trainingPresets, queryFn: () => api.get<TrainingPreset[]>("/training/presets"), enabled, staleTime: 60_000 });
+
+export const useTrainingJobs = (q: Query) =>
+  useQuery({ queryKey: queryKeys.trainingJobs(q), queryFn: () => api.page<TrainingJob>("/training/jobs", { query: q }), placeholderData: keepPreviousData });
+
+// Polling is a fallback: the training socket invalidates these as soon as anything changes.
+export const useCurrentJob = () =>
+  useQuery({ queryKey: queryKeys.currentJob, queryFn: () => api.get<TrainingJob | null>("/training/jobs/current"), refetchInterval: 15_000 });
+
+export const useJobMetrics = (id: string | null) =>
+  useQuery({ queryKey: queryKeys.jobMetrics(id ?? ""), queryFn: () => api.get<TrainingMetricPoint[]>(`/training/jobs/${id}/metrics`), enabled: !!id });
+
+export const useModels = () => useQuery({ queryKey: queryKeys.models, queryFn: () => api.get<AiModelRow[]>("/models") });
+
+export const useEvaluation = (versionId: string | null) =>
+  useQuery({
+    queryKey: queryKeys.evaluation(versionId ?? ""),
+    queryFn: () => api.get<Evaluation>(`/models/versions/${versionId}/evaluation`),
+    enabled: !!versionId,
+    refetchInterval: (q) => (q.state.data?.state === "running" ? 3000 : false),
+  });

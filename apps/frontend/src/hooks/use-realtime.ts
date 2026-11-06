@@ -1,26 +1,23 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import { queryKeys } from "@/hooks/queries";
 import { API_URL, refreshAccessToken, session } from "@/services/api";
 
 export type LiveState = "connecting" | "live" | "offline";
 
-interface InboxEvent {
-  type: "conversation.changed" | "message.changed" | "decision.changed";
-  conversationId: string;
-}
-
 /**
- * Keeps the inbox queries fresh. The server sends ids only, so this just invalidates the matching
- * queries and lets TanStack Query refetch through the authorised REST API.
- * The server closes the socket when the access token expires; reconnecting fetches a fresh one.
+ * One Socket.IO connection that listens for `event`. The server sends ids only, so handlers just
+ * invalidate queries and let TanStack Query refetch through the authorised REST API. The server
+ * closes the socket when the access token expires; reconnecting fetches a fresh one, and
+ * `onReconnect` catches up on anything missed while offline.
  */
-export function useInboxSocket(): LiveState {
-  const queryClient = useQueryClient();
+export function useRealtime<E>(event: string, onEvent: (e: E) => void, onReconnect: () => void): LiveState {
   const [state, setState] = useState<LiveState>("connecting");
+  const handlers = useRef({ onEvent, onReconnect });
+  useEffect(() => {
+    handlers.current = { onEvent, onReconnect };
+  });
 
   useEffect(() => {
     const socket = io(new URL(API_URL).origin, {
@@ -39,18 +36,13 @@ export function useInboxSocket(): LiveState {
       if (reason === "io server disconnect") socket.connect();
     });
     socket.on("connect_error", () => setState("offline"));
-    socket.on("inbox", (event: InboxEvent) => {
-      void queryClient.invalidateQueries({ queryKey: ["inbox", "conversations"] });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(event.conversationId) });
-      if (event.type !== "conversation.changed") void queryClient.invalidateQueries({ queryKey: queryKeys.messages(event.conversationId) });
-    });
-    // Anything missed while offline is picked up on reconnect.
-    socket.io.on("reconnect", () => void queryClient.invalidateQueries({ queryKey: queryKeys.inbox }));
+    socket.on(event, (e: E) => handlers.current.onEvent(e));
+    socket.io.on("reconnect", () => handlers.current.onReconnect());
 
     return () => {
       socket.close();
     };
-  }, [queryClient]);
+  }, [event]);
 
   return state;
 }

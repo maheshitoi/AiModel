@@ -326,3 +326,147 @@ export interface SecuritySettings {
   refreshTokenTtlDays: number;
   maxFailedLogins: number;
 }
+
+// ── datasets, training, models (Phase 14) ────────────────────────────────────
+export type DatasetStatus = "UPLOADED" | "VALIDATING" | "VALID" | "INVALID" | "APPROVED" | "ARCHIVED";
+
+/** The validation report for one dataset: what training will actually see after cleaning. */
+export interface DatasetStats {
+  records: number;
+  valid_records: number;
+  dropped_after_cleaning: number;
+  duplicates: number;
+  unique: number;
+  train: number;
+  validation: number;
+  turns: number;
+  intents: Record<string, number>;
+}
+
+export interface DatasetRow {
+  id: string;
+  name: string;
+  version: number;
+  description: string | null;
+  fileName: string;
+  format: "JSON" | "JSONL" | "TXT";
+  sizeBytes: number;
+  recordCount: number;
+  duplicateCount: number;
+  validationErrors: { issueCount: number; issues: { record: number; message: string }[]; empty?: boolean } | null;
+  stats: DatasetStats | null;
+  status: DatasetStatus;
+  isActive: boolean;
+  containsCustomerData: boolean;
+  approvedAt: string | null;
+  createdAt: string;
+  uploadedBy: { id: string; name: string } | null;
+  approvedBy: { id: string; name: string } | null;
+  _count: { trainingJobs: number };
+}
+
+export interface ChatTurn {
+  role: "customer" | "assistant";
+  text: string;
+}
+
+export interface DatasetPreview {
+  total: number;
+  items: { messages: ChatTurn[]; intent?: string; source: string }[];
+}
+
+export interface TrainingPreset {
+  name: string;
+  description: string | null;
+  model: Record<string, number | boolean>;
+  training: { max_steps: number; batch_size: number; learning_rate: number; device: string };
+  dataset: { synthetic_conversations: number };
+  tokenizer: { vocab_size: number };
+}
+
+export type TrainingJobStatus = "QUEUED" | "RUNNING" | "STOPPING" | "STOPPED" | "COMPLETED" | "FAILED";
+export type ModelVersionStatus = "TRAINING" | "READY" | "FAILED" | "ARCHIVED";
+
+export interface TrainingJob {
+  id: string;
+  status: TrainingJobStatus;
+  runName: string | null;
+  device: string | null;
+  config: { preset: string; maxSteps: number | null; includeSynthetic: boolean };
+  currentStep: number;
+  totalSteps: number;
+  currentEpoch: number;
+  bestValLoss: number | null;
+  errorMessage: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedBy: { id: string; name: string } | null;
+  modelVersion: { id: string; version: number; status: ModelVersionStatus; checkpointPath: string | null; isActive: boolean; parameterCount: number } | null;
+  datasets: { id: string; name: string; version: number }[];
+}
+
+export interface TrainingMetricPoint {
+  step: number;
+  epoch: number;
+  trainLoss: number;
+  valLoss: number | null;
+  learningRate: number;
+  tokensPerSec: number | null;
+  cpuPercent: number | null;
+  memoryMb: number | null;
+  createdAt: string;
+}
+
+export interface EvalSummary {
+  step: number | null;
+  parameters: number;
+  validation: { loss: number; perplexity: number; assistant_tokens: number; uniform_baseline_loss: number };
+  groups: Record<string, { passed: number; total: number; rate: number }>;
+  overall_pass_rate: number;
+  well_formed_rate: number;
+  verbatim_rate: number;
+  evaluatedAt?: string;
+}
+
+export interface EvalCase {
+  group: string;
+  prompt: ChatTurn[];
+  reply: string;
+  expected_any: string[];
+  passed: boolean;
+  verbatim_from_training: boolean;
+  notes: string[];
+}
+
+export interface Evaluation {
+  checkpoint: string;
+  state: "none" | "running" | "completed" | "failed";
+  report: (EvalSummary & { cases: EvalCase[] }) | null;
+  error: string | null;
+}
+
+export interface ModelVersionRow {
+  id: string;
+  version: number;
+  status: ModelVersionStatus;
+  isActive: boolean;
+  parameterCount: number;
+  vocabSize: number;
+  contextLength: number;
+  checkpointPath: string | null;
+  evalMetrics: EvalSummary | null;
+  trainedAt: string | null;
+  activatedAt: string | null;
+  createdAt: string;
+  trainingJob: { id: string; status: TrainingJobStatus; runName: string | null; bestValLoss: number | null; currentStep: number; totalSteps: number; finishedAt: string | null } | null;
+}
+
+export interface AiModelRow {
+  id: string;
+  name: string;
+  description: string | null;
+  architecture: string;
+  versions: ModelVersionRow[];
+}

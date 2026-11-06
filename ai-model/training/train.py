@@ -225,7 +225,6 @@ def train(config_path: Path, data_dir: Path, out_dir: Path, resume: bool = False
         raise
 
     checkpoint("last.pt")
-    (out_dir / "STOP").unlink(missing_ok=True)
     summary = {
         **summary_base,
         "status": status,
@@ -239,6 +238,8 @@ def train(config_path: Path, data_dir: Path, out_dir: Path, resume: bool = False
     log.event(type="end", **summary)
     log.status(**summary)
     log.close()
+    # Only after the final status is written, so a watcher never sees "running" without a stop request.
+    (out_dir / "STOP").unlink(missing_ok=True)
     print(f"Finished ({status}) at step {step}; best val loss {summary['best_val_loss']} at step {best_step}")
     return summary
 

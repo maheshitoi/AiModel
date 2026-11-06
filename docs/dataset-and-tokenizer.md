@@ -91,4 +91,5 @@ That is a property of the data, not a bug. The model's embedding size follows th
   what limits this dataset.
 - The best improvement is **reviewed, approved real conversations** (and more templates). Customer
   messages are never added automatically. Export only approved conversations to a file and pass it
-  with `--input`. Phase 14 adds review and approval in the dashboard.
+  with `--input`, or use the dashboard's Datasets page, where every dataset is validated, previewed and
+  explicitly approved before training can use it ([training-dashboard.md](training-dashboard.md)).

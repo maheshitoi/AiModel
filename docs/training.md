@@ -12,8 +12,8 @@ npm run ai:evaluate -- checkpoints/<run>/best.pt  # 3. evaluation.md + evaluatio
 ..\.venv\Scripts\python.exe -m training.train --config config/tiny-cpu.json --out checkpoints/my-run --resume
 ```
 
-**Stopping safely:** create an empty file named `STOP` in the run directory (the dashboard will do
-this in Phase 14), or press Ctrl+C. Either way, `last.pt` is saved before exit, and `--resume`
+**Stopping safely:** create an empty file named `STOP` in the run directory (the dashboard's Stop
+button does exactly this, see [training-dashboard.md](training-dashboard.md)), or press Ctrl+C. Either way, `last.pt` is saved before exit, and `--resume`
 continues from that exact step, with the same data order and optimiser state.
 
 ## How training works
@@ -116,7 +116,7 @@ they work and the measured results. Item 4 belongs to the backend (Phase 10).
 Diversity of data, not model size, is the bottleneck. The `small-cpu` config would memorise the same
 templates more expensively. In order of impact:
 
-- Approved real conversations, reviewed in the dashboard (Phase 14).
+- Approved real conversations, reviewed in the dashboard (Datasets → From conversations, then review and approve).
 - More paraphrases per intent, especially emergency and medical phrasing. The current templates have
   only 5 emergency phrasings, so "collapsed and not breathing" is unseen.
 - More out-of-scope examples, so "decline" is learned as a general behaviour rather than a few sentences.
