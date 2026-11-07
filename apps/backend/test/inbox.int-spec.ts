@@ -108,6 +108,19 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+/**
+ * The message once no send is in flight. Replying also kicks the sender in the background, which may
+ * claim the message before the test's own processDue() does; wait for that send to finish.
+ */
+async function settled(id: string) {
+  for (let i = 0; i < 100; i++) {
+    const m = await prisma.message.findUniqueOrThrow({ where: { id } });
+    if (m.status !== 'SENDING' && m.status !== 'QUEUED') return m;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return prisma.message.findUniqueOrThrow({ where: { id } });
+}
+
 describe('conversation list', () => {
   it('filters, searches and sorts newest first', async () => {
     const t = Date.now();
@@ -163,7 +176,7 @@ describe('messages and replies', () => {
     expect(JSON.stringify(audit)).not.toContain('Hello from the team');
 
     await sender.processDue();
-    expect(await prisma.message.findUniqueOrThrow({ where: { id } })).toMatchObject({ status: 'SENT' });
+    expect(await settled(id)).toMatchObject({ status: 'SENT' });
     expect(graphSends.at(-1)).toEqual({ to: c.customerWaId, text: 'Hello from the team' });
   });
 
@@ -185,7 +198,7 @@ describe('messages and replies', () => {
     expect(res.status).toBe(200);
     expect((await api(`/conversations/${c.id}/messages/${failed.id}/retry`, { method: 'POST' })).status).toBe(409);
     await sender.processDue();
-    expect(await prisma.message.findUniqueOrThrow({ where: { id: failed.id } })).toMatchObject({ status: 'SENT', retryCount: 0, errorCode: null });
+    expect(await settled(failed.id)).toMatchObject({ status: 'SENT', retryCount: 0, errorCode: null });
   });
 });
 

@@ -71,6 +71,18 @@ def estimate_loss(model: GPT, split: TokenSplit, batch_size: int, batches: int, 
     return total / batches
 
 
+def replace_with_retry(src: Path, dst: Path, attempts: int = 20) -> None:
+    """os.replace, retried briefly: on Windows it fails while another process (the AI service) is reading dst."""
+    for attempt in range(attempts):
+        try:
+            src.replace(dst)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.05)
+
+
 def resolve_device(setting: str) -> str:
     if setting == "auto":
         return "cuda" if torch.cuda.is_available() else "cpu"
@@ -89,7 +101,7 @@ class RunLog:
     def status(self, **data: Any) -> None:
         tmp = self.out_dir / "status.json.tmp"
         tmp.write_text(json.dumps({"updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **data}, indent=2))
-        tmp.replace(self.out_dir / "status.json")
+        replace_with_retry(tmp, self.out_dir / "status.json")
 
     def close(self) -> None:
         self.metrics.close()

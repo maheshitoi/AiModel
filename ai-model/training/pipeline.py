@@ -22,13 +22,13 @@ from pathlib import Path
 
 from dataset.build import build
 
-from .train import train
+from .train import replace_with_retry, train
 
 
 def _status(run_dir: Path, **data) -> None:
     tmp = run_dir / "status.json.tmp"
     tmp.write_text(json.dumps({"updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **data}, indent=2))
-    tmp.replace(run_dir / "status.json")
+    replace_with_retry(tmp, run_dir / "status.json")
 
 
 def run(run_dir: Path) -> dict:

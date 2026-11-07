@@ -52,7 +52,7 @@ def _now() -> str:
 def _read_json(path: Path) -> dict[str, Any] | None:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):  # missing, or being replaced right now
+    except (OSError, json.JSONDecodeError):  # missing, or being replaced right now (Windows can refuse the read)
         return None
 
 
@@ -228,6 +228,10 @@ class TrainingManager:
         if raw in ("starting", "preparing", "running"):
             pid = status.get("pid") or (_read_json(run_dir / "job.json") or {}).get("launcher_pid")
             if not _running(pid, "training.pipeline"):
+                # It may have written its final status and exited since we read the file: look again first.
+                again = _read_json(run_dir / "status.json") or {}
+                if again.get("status") not in (None, "starting", "preparing", "running"):
+                    return again["status"], again
                 return "failed", {**status, "error": status.get("error") or "The training process exited unexpectedly (see train.log)"}
             if (run_dir / "STOP").exists():
                 return "stopping", status

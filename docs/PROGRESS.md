@@ -148,4 +148,11 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
       (11 new), frontend 44 (9 new); real end-to-end run through the dashboard stack (2026-11-04, see [training-dashboard.md](training-dashboard.md))
 - [ ] `database.int-spec.ts` needs a reset database: run `npm run test:db` yourself
 ## Phase 15 – Integration testing
+- [x] Full-stack suite `test/full-stack.int-spec.ts`: real AI service process + backend + test DB + fake Graph API; dataset review →
+      real training → evaluation → activation → emergency reply sent at once → model suggestion → approval → send → delivery receipt
+- [x] All DB suites rerunnable without a reset (`database.int-spec.ts` fixed)
+- [x] Fixed: finished jobs occasionally recorded as failed (status/exit race); Windows status-file replace retry; send races in tests
+- [x] Results: frontend 44, backend unit 66, DB integration + full stack 57 (3 consecutive runs), ai-model 62, AI service 105 (2026-11-07);
+      see [testing.md](testing.md)
+- [ ] Not covered: Meta's real servers, automated browser tests, load tests
 ## Phase 16 – Production deployment

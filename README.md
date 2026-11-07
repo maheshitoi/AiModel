@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 14 complete (training and model management)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **Phase 15 complete (integration testing)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 > The model itself still fails on emergencies and unfamiliar requests. The inference service puts
 > safety rules, reply checks and a confidence gate around it ([docs/inference.md](docs/inference.md)).
 > It still sends 3 wrong (not dangerous) replies out of 22 test prompts, so keep auto-reply off.
@@ -163,10 +163,12 @@ an old one revokes the session.
 ```powershell
 npm test -w apps/frontend                                       # Next.js component/client tests (Vitest)
 npm test -w apps/backend                                        # NestJS unit tests (Jest)
-npm run test:db -w apps/backend                                 # DB integration tests (resets Ai-model-test)
+npm run test:db -w apps/backend                                 # DB integration + full-stack test with the real AI service (resets Ai-model-test)
 npm run test:ai-model                                           # tokenizer, dataset, model, training (pytest)
 npm run test:ai                                                 # inference service, guardrails, dataset/training jobs (pytest)
 ```
+
+What each suite covers, the latest results and what isn't covered: [docs/testing.md](docs/testing.md).
 
 ## Frontend notes
 

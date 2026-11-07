@@ -1,11 +1,13 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import { ROLE_PERMISSIONS } from '../src/common/permissions';
-import { seedDatabase } from '../src/database/seed';
+import { DEFAULT_MODEL_NAME, seedDatabase } from '../src/database/seed';
 import { SETTING_DEFAULTS } from '../src/settings/settings.defaults';
 import { getTestDatabaseUrl } from './test-database';
 
 const prisma = new PrismaClient({ datasources: { db: { url: getTestDatabaseUrl() } } });
 
+// Unique per run, so the suite also works on a database that wasn't reset.
+const RUN = Date.now();
 const uniqueViolation = expect.objectContaining({ code: 'P2002' });
 
 async function createConversation(customerWaId = '15550001111') {
@@ -38,7 +40,7 @@ describe('seed', () => {
 
     expect(await prisma.role.count()).toBe(Object.keys(ROLE_PERMISSIONS).length);
     expect(await prisma.systemSetting.count()).toBe(Object.keys(SETTING_DEFAULTS).length);
-    expect(await prisma.aIModel.count()).toBe(1);
+    expect(await prisma.aIModel.count({ where: { name: DEFAULT_MODEL_NAME } })).toBe(1);
     // A user-changed setting must survive re-seeding.
     const system = await prisma.systemSetting.findUniqueOrThrow({ where: { key: 'system' } });
     expect(system.value).toEqual({ timezone: 'Asia/Kolkata' });
@@ -48,14 +50,14 @@ describe('seed', () => {
 describe('WhatsApp idempotency constraints', () => {
   it('rejects a second message with the same WhatsApp message ID (webhook redelivery)', async () => {
     const convo = await createConversation('15550000001');
-    await prisma.message.create({ data: inbound(convo.id, 'wamid.DUP') });
+    await prisma.message.create({ data: inbound(convo.id, `wamid.DUP-${RUN}`) });
 
-    await expect(prisma.message.create({ data: inbound(convo.id, 'wamid.DUP') })).rejects.toEqual(uniqueViolation);
+    await expect(prisma.message.create({ data: inbound(convo.id, `wamid.DUP-${RUN}`) })).rejects.toEqual(uniqueViolation);
   });
 
   it('allows at most one AI reply per inbound message', async () => {
     const convo = await createConversation('15550000002');
-    const msg = await prisma.message.create({ data: inbound(convo.id, 'wamid.Q1') });
+    const msg = await prisma.message.create({ data: inbound(convo.id, `wamid.Q1-${RUN}`) });
     const reply: Prisma.MessageUncheckedCreateInput = {
       conversationId: convo.id,
       direction: 'OUTBOUND',
@@ -71,7 +73,7 @@ describe('WhatsApp idempotency constraints', () => {
 
   it('ignores duplicate status updates for the same message', async () => {
     const convo = await createConversation('15550000003');
-    const msg = await prisma.message.create({ data: inbound(convo.id, 'wamid.S1') });
+    const msg = await prisma.message.create({ data: inbound(convo.id, `wamid.S1-${RUN}`) });
     const status = { messageId: msg.id, status: 'DELIVERED' as const, occurredAt: new Date() };
     await prisma.messageStatusHistory.create({ data: status });
 
@@ -90,12 +92,12 @@ describe('WhatsApp idempotency constraints', () => {
 describe('transactions and cascades', () => {
   it('rolls back the conversation update when the message insert fails', async () => {
     const convo = await createConversation('15550000005');
-    await prisma.message.create({ data: inbound(convo.id, 'wamid.TX') });
+    await prisma.message.create({ data: inbound(convo.id, `wamid.TX-${RUN}`) });
 
     await expect(
       prisma.$transaction([
         prisma.conversation.update({ where: { id: convo.id }, data: { unreadCount: { increment: 1 } } }),
-        prisma.message.create({ data: inbound(convo.id, 'wamid.TX') }),
+        prisma.message.create({ data: inbound(convo.id, `wamid.TX-${RUN}`) }),
       ]),
     ).rejects.toEqual(uniqueViolation);
 
@@ -105,7 +107,7 @@ describe('transactions and cascades', () => {
 
   it('deletes messages and status history with their conversation', async () => {
     const convo = await createConversation('15550000006');
-    const msg = await prisma.message.create({ data: inbound(convo.id, 'wamid.C1') });
+    const msg = await prisma.message.create({ data: inbound(convo.id, `wamid.C1-${RUN}`) });
     await prisma.messageStatusHistory.create({ data: { messageId: msg.id, status: 'READ', occurredAt: new Date() } });
 
     await prisma.conversation.delete({ where: { id: convo.id } });
@@ -117,14 +119,15 @@ describe('transactions and cascades', () => {
 
 describe('model versions', () => {
   it('allows only one active model version platform-wide', async () => {
-    const model = await prisma.aIModel.create({ data: { name: 'constraint-test' } });
+    const model = await prisma.aIModel.create({ data: { name: `constraint-test-${RUN}` } });
     const base = { modelId: model.id, config: {}, parameterCount: 1, vocabSize: 256, contextLength: 128 };
-    await prisma.modelVersion.create({ data: { ...base, version: 1, isActive: true } });
+    // Another suite may already have activated a version; otherwise make this one the active version.
+    const alreadyActive = await prisma.modelVersion.count({ where: { isActive: true } });
+    await prisma.modelVersion.create({ data: { ...base, version: 1, isActive: alreadyActive === 0 } });
     await prisma.modelVersion.create({ data: { ...base, version: 2 } });
-    await prisma.modelVersion.create({ data: { ...base, version: 3 } });
 
-    await expect(prisma.modelVersion.create({ data: { ...base, version: 4, isActive: true } })).rejects.toEqual(
-      uniqueViolation,
-    );
+    await expect(prisma.modelVersion.create({ data: { ...base, version: 3, isActive: true } })).rejects.toEqual(uniqueViolation);
+    expect(await prisma.modelVersion.count({ where: { isActive: true } })).toBe(1);
+    await prisma.aIModel.delete({ where: { id: model.id } });
   });
 });
