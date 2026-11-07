@@ -156,3 +156,16 @@ Legend: [x] done and verified · [~] in progress / partially verified · [ ] not
       see [testing.md](testing.md)
 - [ ] Not covered: Meta's real servers, automated browser tests, load tests
 ## Phase 16 – Production deployment
+- [x] Dockerfiles: backend (multi-stage, prod deps only, non-root), frontend (Next standalone, non-root), AI service
+      (CPU PyTorch, non-root, volumes for checkpoints/datasets; CUDA build arg); `.dockerignore`
+- [x] `docker-compose.prod.yml`: Caddy (automatic HTTPS, security headers, the only published ports), frontend, backend,
+      one-shot `migrate`, AI service, PostgreSQL 17; health checks; `.env.production.example`
+- [x] Backend production settings: `TRUST_PROXY` (real client IPs behind Caddy), Swagger off in production (`SWAGGER_ENABLED`)
+- [x] `docker/backup.sh` / `docker/restore.sh`; [deployment.md](deployment.md) (first deploy, model setup, WhatsApp webhook, updates,
+      backups, operations, security checklist)
+- [x] Verified locally (2026-11-07, Docker 28): all images build; stack healthy; migrations applied; 15/15 smoke checks over
+      HTTPS (redirect, headers, Secure/HttpOnly/SameSite cookie, Swagger off, webhook reachable, login, training presets,
+      model copied into the volume, activated and answering, emergency handoff); only Caddy publishes ports; client IP
+      recorded correctly; backup produced a valid dump (20 tables) and checkpoint archive
+- [ ] Restore script not run (its in-container cleanup was blocked by a safety check): test it once on your server
+- [ ] Real domain + Let's Encrypt certificate and Meta webhook: needs your server and DNS

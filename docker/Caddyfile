@@ -1,0 +1,33 @@
+# The only public entry point. Caddy obtains and renews the HTTPS certificate for $DOMAIN automatically
+# (DOMAIN=localhost uses Caddy's own local certificate authority instead).
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# API (including the WhatsApp webhook at /api/v1/webhooks/whatsapp) and live updates.
+	@backend path /api/* /socket.io/*
+	handle @backend {
+		reverse_proxy backend:4000
+	}
+
+	# Everything else is the dashboard.
+	handle {
+		reverse_proxy frontend:3000
+	}
+
+	request_body {
+		max_size 25MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

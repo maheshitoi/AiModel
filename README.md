@@ -4,7 +4,7 @@ A self-hosted AI platform: a GPT-style language model **trained from scratch** i
 answers customers on an existing **WhatsApp Business** number through the official Cloud API. It is
 managed from a Next.js dashboard backed by NestJS and PostgreSQL.
 
-> Status: **Phase 15 complete (integration testing)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
+> Status: **All 16 phases complete (Phase 16: production deployment)**. See [docs/PROGRESS.md](docs/PROGRESS.md).
 > The model itself still fails on emergencies and unfamiliar requests. The inference service puts
 > safety rules, reply checks and a confidence gate around it ([docs/inference.md](docs/inference.md)).
 > It still sends 3 wrong (not dangerous) replies out of 22 test prompts, so keep auto-reply off.
@@ -190,4 +190,13 @@ What each suite covers, the latest results and what isn't covered: [docs/testing
 
 ## Deployment
 
-Covered in Phase 16.
+Production runs as Docker Compose on one Linux server: Caddy (automatic HTTPS, the only public ports), the
+dashboard, the backend (migrations run first, in a one-shot container), the AI service and PostgreSQL.
+
+```bash
+cp .env.production.example .env.production      # fill in DOMAIN and every CHANGE_ME
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env.production run --rm backend node apps/backend/dist/database/seed.cli.js
+```
+
+Full guide (model setup, WhatsApp webhook, updates, backups, security checklist): [docs/deployment.md](docs/deployment.md).

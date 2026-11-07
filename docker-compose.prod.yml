@@ -1,0 +1,101 @@
+# Production stack. Run from the repo root:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# Only Caddy publishes ports. PostgreSQL and the AI service are reachable only inside the stack.
+# See docs/deployment.md.
+
+name: myownai
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+  BACKEND_PORT: "4000"
+  CORS_ORIGINS: https://${DOMAIN}
+  TRUST_PROXY: "1"
+  AI_SERVICE_URL: http://ai-service:8000
+  AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN}
+  AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-15000}
+  CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY}
+  WHATSAPP_GRAPH_URL: ${WHATSAPP_GRAPH_URL:-https://graph.facebook.com}
+  WHATSAPP_GRAPH_VERSION: ${WHATSAPP_GRAPH_VERSION:-v23.0}
+  WHATSAPP_SENDER_INTERVAL_MS: ${WHATSAPP_SENDER_INTERVAL_MS:-2000}
+  TRAINING_POLL_INTERVAL_MS: ${TRAINING_POLL_INTERVAL_MS:-3000}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+  SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies pending migrations, then exits. The backend starts only if it succeeded.
+  migrate:
+    build: { context: ., dockerfile: docker/backend.Dockerfile, target: build }
+    command: ["npx", "prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"]
+    environment: *backend-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  backend:
+    build: { context: ., dockerfile: docker/backend.Dockerfile }
+    restart: unless-stopped
+    environment: *backend-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      ai-service: { condition: service_started }
+
+  ai-service:
+    build: { context: ., dockerfile: docker/ai-service.Dockerfile }
+    restart: unless-stopped
+    environment:
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN}
+      AI_MODEL_CHECKPOINT: ${AI_MODEL_CHECKPOINT:-}
+      AI_MIN_CONFIDENCE: ${AI_MIN_CONFIDENCE:-0.5}
+      AI_QUEUE_TIMEOUT_SECONDS: ${AI_QUEUE_TIMEOUT_SECONDS:-10}
+      AI_TORCH_THREADS: ${AI_TORCH_THREADS:-}
+    volumes:
+      - checkpoints:/app/ai-model/checkpoints
+      - datasets:/app/ai-model/dataset/uploads
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend, backend]
+
+volumes:
+  pgdata:
+  checkpoints:
+  datasets:
+  caddy_data:
+  caddy_config:

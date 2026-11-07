@@ -38,6 +38,16 @@ class EnvironmentVariables {
   @Max(65535)
   BACKEND_PORT: number = 4000;
 
+  /** Reverse proxies in front of the backend (1 behind Caddy), so client IPs and rate limits are right. */
+  @IsInt()
+  @Min(0)
+  @Max(5)
+  TRUST_PROXY: number = 0;
+
+  /** Serve the Swagger UI at /api/docs. Off in production unless set to true. */
+  @IsIn(['true', 'false', ''])
+  SWAGGER_ENABLED: string = '';
+
   @IsString()
   CORS_ORIGINS: string = 'http://localhost:3000';
 
